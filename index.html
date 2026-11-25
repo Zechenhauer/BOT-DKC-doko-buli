@@ -1,0 +1,3312 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOT DKC – Doppelkopf Bundesliga Manager</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23059669%22/><text x=%2250%22 y=%2272%22 font-size=%2255%22 text-anchor=%22middle%22 fill=%22%23ffffff%22>🂊</text></svg>">
+    <link rel="apple-touch-icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23059669%22/><text x=%2250%22 y=%2272%22 font-size=%2255%22 text-anchor=%22middle%22 fill=%22%23ffffff%22>🂊</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            200: '#a7f3d0',
+                            300: '#6ee7b7',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                            950: '#022c22',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #070b14;
+        }
+        .glow-green {
+            box-shadow: 0 0 28px -6px rgba(16, 185, 129, 0.35);
+        }
+        .glow-green-btn {
+            box-shadow: 0 4px 16px -2px rgba(16, 185, 129, 0.45);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased selection:bg-emerald-400 selection:text-slate-950">
+
+    <!-- Header Navigation: Spieler-Status links, Admin-Toggle rechts -->
+    <header class="bg-[#0b1120]/95 backdrop-blur-md border-b border-emerald-500/20 sticky top-0 z-30 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="text-xs text-slate-400 hidden sm:inline">Angemeldet als:</span>
+                <button onclick="openPlayerLoginModal()" id="header-player-btn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-emerald-950/60 text-slate-100 border border-emerald-500/30 transition flex items-center gap-2 truncate">
+                    <i class="fa-solid fa-user text-emerald-400"></i>
+                    <span id="header-player-name" class="truncate">Spieler wählen...</span>
+                    <i class="fa-solid fa-pen text-[10px] text-emerald-400/80"></i>
+                </button>
+                <span id="db-sync-badge" class="hidden md:inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-500/30">
+                    <i class="fa-solid fa-cloud text-[10px] text-emerald-400"></i>
+                    <span>Supabase</span>
+                </span>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+                <button id="admin-open-btn" onclick="switchTab('admin')" class="hidden px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-400/40 hover:bg-emerald-500/25 transition items-center gap-1.5">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span class="hidden sm:inline">Admin-Bereich</span>
+                </button>
+                <button id="admin-toggle-btn" onclick="toggleAdminAuth()" class="px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 border border-slate-800">
+                    <i id="admin-toggle-icon" class="fa-solid fa-lock text-[10px]"></i>
+                    <span id="admin-toggle-label">Admin</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+        <!-- LOGO, VEREINS-ÜBERSCHRIFT & WEBMANAGEMENT -->
+        <div class="flex flex-col items-center justify-center text-center space-y-2 py-1">
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 bg-gradient-to-r from-[#0d1526] via-[#0f1c2e] to-[#0d1526] border border-emerald-500/35 px-6 py-3.5 rounded-2xl shadow-xl glow-green">
+                <img src="https://raw.githubusercontent.com/Zechenhauer/bundesliga_doko/main/logo.png" alt="DoKo Logo" class="h-12 sm:h-14 w-auto object-contain bg-white/5 p-1 rounded-xl border border-emerald-500/30" onerror="this.style.display='none'">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex flex-wrap items-center justify-center gap-2.5">
+                        <span class="text-emerald-400">BOT DKC</span>
+                        <span class="text-slate-600 font-normal hidden sm:inline">&bull;</span>
+                        <span class="text-lg sm:text-2xl font-bold text-slate-100">DoKo Bundesliga</span>
+                        <span class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-3 py-1 rounded-full font-bold">Saison 2027</span>
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center gap-2.5 pt-1">
+                <img
+                    src="https://raw.githubusercontent.com/Zechenhauer/bundesliga_doko/main/logo01.png"
+                    alt="Webmanagement Logo"
+                    style="height: 80px; width: auto;"
+                    class="object-contain rounded-xl"
+                    onerror="this.style.display='none'"
+                >
+                <p class="text-xs text-emerald-400/80 font-medium">Webmanagement Jürgen Schützendorf</p>
+            </div>
+        </div>
+
+        <!-- ZENTRALE VEREINS-KACHEL FÜR BOT DKC DIREKT UNTER DER ÜBERSCHRIFT -->
+        <section class="bg-gradient-to-br from-[#0d1627] via-[#0a1322] to-[#071019] border border-emerald-500/40 rounded-2xl p-5 sm:p-6 shadow-2xl glow-green space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-500/20 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+                        <i class="fa-solid fa-shield-halved text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-extrabold text-white tracking-tight">Vereins-Cockpit: <span class="text-emerald-400">BOT DKC</span></h2>
+                        <p class="text-xs text-slate-400">Tabellenstand, Top 3 Vereins-Spieler 2027, Kader-Historie &amp; Zusagen/Absagen aller Spieltage</p>
+                    </div>
+                </div>
+                <button onclick="openPlayerLoginModal()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-emerald-950/70 text-slate-200 border border-emerald-500/35 text-xs font-semibold transition flex items-center gap-2 self-start sm:self-auto">
+                    <i class="fa-solid fa-user-check text-emerald-400"></i>
+                    <span>Spieler: <strong class="text-emerald-300" id="cockpit-player-label">Bitte anmelden</strong></span>
+                </button>
+            </div>
+
+            <!-- 3 Kern-Blöcke innerhalb des BOT DKC Cockpits -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Block 1: Aktueller Tabellenplatz BOT DKC -->
+                <div onclick="switchTab('table')" class="bg-[#080e1a]/90 hover:border-emerald-400/70 border border-emerald-500/25 rounded-xl p-4 cursor-pointer transition flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-ranking-star text-emerald-400"></i> Tabellenplatz BOT DKC
+                        </span>
+                        <span class="text-[10px] bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">Tabelle &rarr;</span>
+                    </div>
+                    <div id="botdkc-standing-box" class="py-1">
+                        <div class="text-xs text-slate-500">Noch keine Spieltage für BOT DKC erfasst.</div>
+                    </div>
+                </div>
+
+                <!-- Block 2: Top 3 Einzelwertung 2027 (NUR BOT DKC SPIELER) -->
+                <div onclick="switchTab('bot-single-2027')" class="bg-[#080e1a]/90 hover:border-emerald-400/70 border border-emerald-500/25 rounded-xl p-4 cursor-pointer transition flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-user-trophy text-amber-400"></i> Top 3 BOT DKC (Einzel 2027)
+                        </span>
+                        <span class="text-[10px] bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">Alle anzeigen &rarr;</span>
+                    </div>
+                    <div id="top3-2027-list" class="space-y-1.5 text-xs">
+                        <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/60 text-slate-500 text-center">
+                            Ab 2027 nach 1. Spieltag per CSV
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Block 3: Kader & Historie BOT DKC -->
+                <div onclick="switchTab('kader')" class="bg-[#080e1a]/90 hover:border-emerald-400/70 border border-emerald-500/25 rounded-xl p-4 cursor-pointer transition flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-chart-simple text-emerald-400"></i> Kader &amp; Historie BOT DKC
+                        </span>
+                        <span class="text-[10px] bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">Kader &rarr;</span>
+                    </div>
+                    <div id="botdkc-player-stats-box" class="space-y-1.5 text-xs">
+                        <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/60 text-slate-500 text-center">
+                            Gesamtdatei / Kader im Admin laden
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALLE SPIELTAGE & NAMEN DER ZUSAGEN/ABSAGEN IM VEREINS-COCKPIT -->
+            <div class="bg-[#080e1a]/90 border border-emerald-500/25 rounded-xl p-4 sm:p-5 space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/90 pb-3">
+                    <div>
+                        <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-check"></i> Spieltage &amp; Rückmeldungen (Doppelspieltage)
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Klicke auf Zusage oder Absage – dein Name erscheint sofort bei dem jeweiligen Spieltag.</p>
+                    </div>
+                    <button onclick="switchTab('schedule')" class="text-xs text-emerald-400 hover:text-emerald-300 font-semibold self-start sm:self-auto">
+                        Gruppen &amp; Details öffnen &rarr;
+                    </button>
+                </div>
+                <div id="cockpit-all-matchdays-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+        </section>
+
+        <!-- Notification Banner -->
+        <div id="notification" class="hidden p-4 rounded-xl border text-sm flex items-center justify-between transition-all duration-300">
+            <span id="notification-text"></span>
+            <button onclick="hideNotification()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- AUFGERÄUMTE NAVIGATION: 2 KLARE HAUPT-KACHELN -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Kachel 1: Tabelle, Spieltage & Kader -->
+            <div class="bg-[#0c1424] border border-emerald-500/25 rounded-2xl p-4 shadow-lg flex flex-col justify-between gap-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                        <i class="fa-solid fa-trophy"></i> Liga &amp; Spieltage
+                    </span>
+                    <span class="text-[10px] text-slate-400">Aktuelle Saison</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="switchTab('table')" id="nav-table" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 bg-slate-900 text-slate-200 border border-slate-800 hover:border-emerald-500/40 hover:text-emerald-300">
+                        <i class="fa-solid fa-list-ol text-emerald-400"></i> Bundesliga-Tabelle
+                    </button>
+                    <button onclick="switchTab('schedule')" id="nav-schedule" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-500 text-slate-950 glow-green-btn">
+                        <i class="fa-solid fa-calendar-days"></i> Spieltage &amp; Gruppen
+                    </button>
+                    <button onclick="switchTab('kader')" id="nav-kader" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 bg-slate-900 text-slate-200 border border-slate-800 hover:border-emerald-500/40 hover:text-emerald-300">
+                        <i class="fa-solid fa-users text-emerald-400"></i> Kader BOT DKC
+                    </button>
+                </div>
+            </div>
+
+            <!-- Kachel 2: Eine gebündelte Kachel für alle Listen & Historie -->
+            <div class="bg-[#0c1424] border border-emerald-500/25 rounded-2xl p-4 shadow-lg flex flex-col justify-between gap-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                        <i class="fa-solid fa-folder-open"></i> Listen &amp; Historie
+                    </span>
+                    <span class="text-[10px] text-slate-400">Einzelwertungen &amp; Ehrentafeln</span>
+                </div>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <select id="lists-hub-select" onchange="openSelectedListFromHub(this.value)" class="flex-grow bg-slate-900 border border-slate-700 text-slate-100 text-xs font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-400">
+                        <option value="bot-single-2027">BOT DKC – Einzelwertung 2027 (Alle Vereinsspieler)</option>
+                        <option value="single-2027">Gesamt-Einzelwertung 2027</option>
+                        <option value="single-2026">Einzelwertung 2026</option>
+                        <option value="single-2025">Einzelwertung 2025</option>
+                        <option value="ehre-meister">Ehrentafel Meister (Mannschaft)</option>
+                        <option value="ehre-einzel">Ehrentafel Einzel</option>
+                        <option value="ewige">Ewige Bestenliste (Alle Wettbewerbe)</option>
+                    </select>
+                    <button onclick="openSelectedListFromHub(document.getElementById('lists-hub-select').value)" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shrink-0 glow-green-btn">
+                        Liste öffnen
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: SPIELTAGE & GRUPPEN (DOPPELPIELTAGE) -->
+        <section id="tab-schedule" class="space-y-6">
+            <div class="bg-[#0c1424] border border-emerald-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="text-xs text-slate-300">
+                    <i class="fa-solid fa-circle-info text-emerald-400 mr-1.5"></i>
+                    <strong class="text-emerald-300">Doppelspieltag-Hinweis:</strong> Spieltag 1 &amp; 2 (sowie 3 &amp; 4 usw.) haben jeweils identische Gruppeneinteilungen.
+                </div>
+                <select id="schedule-filter" onchange="renderScheduleView()" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-400">
+                    <option value="all">Alle Spieltage anzeigen</option>
+                </select>
+            </div>
+
+            <div id="schedule-container" class="space-y-6"></div>
+        </section>
+
+        <!-- TAB: BUNDESLIGA TABELLE -->
+        <section id="tab-table" class="hidden space-y-6">
+            <div class="bg-[#0c1424] rounded-2xl border border-emerald-500/25 shadow-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-[#0d192b] to-[#0c1424]">
+                    <h3 class="font-bold text-white text-base flex items-center gap-2">
+                        <i class="fa-solid fa-list-ol text-emerald-400"></i> Bundesliga-Tabelle (<span class="text-emerald-400">BOT DKC</span> hervorgehoben)
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-300 uppercase tracking-wider text-[11px] border-b border-emerald-500/25">
+                                <th class="py-3 px-3 text-center font-bold w-12">Pl.</th>
+                                <th class="py-3 px-4 font-bold">Mannschaft</th>
+                                <th class="py-3 px-3 text-center font-bold bg-emerald-950/60 text-emerald-300">WertP</th>
+                                <th class="py-3 px-3 text-center font-bold bg-slate-900">SpielP</th>
+                                <th class="py-3 px-4 text-center border-l border-slate-800">Spieltage (WP / SP)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-800/70 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: KADER & HISTORIE BOT DKC -->
+        <section id="tab-kader" class="hidden space-y-6">
+            <div class="bg-[#0c1424] rounded-2xl border border-emerald-500/25 shadow-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-gradient-to-r from-[#0d192b] to-[#0c1424]">
+                    <div>
+                        <h3 class="font-bold text-white text-base flex items-center gap-2">
+                            <i class="fa-solid fa-users text-emerald-400"></i> Kader &amp; Bundesliga-Historie BOT DKC
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Standardmäßig ab <strong class="text-emerald-300">Saison 2027</strong> (sortiert nach Punkten &rarr; Runden). Klick auf Spieler zeigt alle Saisons.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="resetKaderTo2027Start()" title="Setzt den aktiven 2027er-Kaderstand auf 0 Punkte / 0 Runden zurück (Historie bleibt erhalten)" class="px-3 py-2 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-left"></i> 2027-Start (0 / 0)
+                        </button>
+                        <select id="kader-season-select" onchange="renderKaderTable()" class="bg-slate-900 border border-emerald-500/30 text-slate-100 text-xs font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-400">
+                            <option value="2027">Saison: 2027 (Aktuell)</option>
+                            <option value="GESAMT">Spalte: GESAMT (Alle Jahre)</option>
+                        </select>
+                        <input type="text" id="search-kader" onkeyup="filterKaderTable()" placeholder="Spieler suchen..." class="bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 w-44 focus:outline-none focus:border-emerald-400">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm" id="table-kader">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-300 uppercase tracking-wider text-[11px] border-b border-emerald-500/25">
+                                <th class="py-3 px-3 text-center font-bold w-14">Rang</th>
+                                <th class="py-3 px-4 font-bold">Spieler</th>
+                                <th id="kader-col-pts-header" class="py-3 px-3 text-center font-bold bg-emerald-950/60 text-emerald-300">Ergebnis (2027)</th>
+                                <th id="kader-col-rd-header" class="py-3 px-3 text-center font-bold">Runden (2027)</th>
+                                <th id="kader-col-avg-header" class="py-3 px-3 text-center font-bold">Schnitt (Ø)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/70 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mannschafts-Platzierungen & Saisonsummen aus Gesamtdatei -->
+            <div id="team-history-strip" class="hidden bg-[#0c1424] border border-emerald-500/25 rounded-2xl p-4 sm:p-5 space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                        <i class="fa-solid fa-award"></i> Mannschafts-Platzierungen &amp; Saisonsummen (aus Gesamtdatei)
+                    </h4>
+                    <div class="flex items-center gap-3 text-[11px] text-slate-400">
+                        <span class="inline-flex items-center gap-1.5 text-amber-300 font-semibold">
+                            <span class="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block"></span> 1. Platz / Meister
+                        </span>
+                        <span>Saison | Platz | Ergebnis / Runden / Ø</span>
+                    </div>
+                </div>
+                <div id="team-history-pills" class="flex flex-wrap gap-2"></div>
+            </div>
+        </section>
+
+        <!-- TAB: BOT DKC EINZELWERTUNG 2027 (ALLE SPIELER DES VEREINS) -->
+        <section id="tab-bot-single-2027" class="hidden space-y-6">
+            <div class="bg-[#0c1424] rounded-2xl border border-emerald-500/35 shadow-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-[#0d192b] to-[#0c1424]">
+                    <div>
+                        <h3 class="font-bold text-white text-base flex items-center gap-2">
+                            <i class="fa-solid fa-user-trophy text-emerald-400"></i> BOT DKC – Einzelwertung 2027 (Alle Vereins-Spieler)
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Gefiltert auf alle Spieler von BOT DKC aus der Einzelwertung 2027</p>
+                    </div>
+                    <button onclick="switchTab('single-2027')" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-emerald-950/60 text-xs text-emerald-300 border border-emerald-500/30 font-semibold">
+                        Gesamte Liga-Liste 2027 &rarr;
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm" id="table-bot-single-2027">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-300 uppercase tracking-wider text-[11px] border-b border-emerald-500/25">
+                                <th class="py-3 px-3 text-center font-bold w-20">Verein-Pl.</th>
+                                <th class="py-3 px-3 text-center font-bold w-20">Liga-Pl.</th>
+                                <th class="py-3 px-4 font-bold">Name, Vorname</th>
+                                <th class="py-3 px-4 font-bold">Mannschaft</th>
+                                <th class="py-3 px-3 text-center font-bold bg-emerald-950/60 text-emerald-300">Punkte (SP)</th>
+                                <th class="py-3 px-3 text-center font-bold">Runden (RD)</th>
+                                <th class="py-3 px-3 text-center font-bold">Schnitt (Ø)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/70 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: EINZELWERTUNG 2027 (GESAMT) -->
+        <section id="tab-single-2027" class="hidden space-y-6">
+            <div class="bg-[#0c1424] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 class="font-bold text-white text-base">Bundesliga-Einzelwertung 2027 (Gesamt)</h3>
+                    <input type="text" id="search-2027" onkeyup="filterSingleTable('2027')" placeholder="Spieler, Verein oder Mannschaft suchen..." class="bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 w-full sm:w-72 focus:outline-none focus:border-emerald-400">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm" id="table-single-2027">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-300 uppercase tracking-wider text-[11px] border-b border-slate-800">
+                                <th class="py-3 px-3 text-center font-bold w-16">Rang</th>
+                                <th class="py-3 px-4 font-bold">Name, Vorname</th>
+                                <th class="py-3 px-4 font-bold">Verein</th>
+                                <th class="py-3 px-4 font-bold">Mannschaft</th>
+                                <th class="py-3 px-3 text-center font-bold bg-emerald-950/60 text-emerald-300">Punkte (SP)</th>
+                                <th class="py-3 px-3 text-center font-bold">Runden (RD)</th>
+                                <th class="py-3 px-3 text-center font-bold">Schnitt (Ø)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/70 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: EINZELWERTUNG 2026 -->
+        <section id="tab-single-2026" class="hidden space-y-6">
+            <div class="bg-[#0c1424] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 class="font-bold text-white text-base">Bundesliga-Einzelwertung 2026</h3>
+                    <input type="text" id="search-2026" onkeyup="filterSingleTable('2026')" placeholder="Spieler, Verein oder Mannschaft suchen..." class="bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 w-full sm:w-72 focus:outline-none focus:border-emerald-400">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm" id="table-single-2026">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-300 uppercase tracking-wider text-[11px] border-b border-slate-800">
+                                <th class="py-3 px-3 text-center font-bold w-16">Rang</th>
+                                <th class="py-3 px-4 font-bold">Name, Vorname</th>
+                                <th class="py-3 px-4 font-bold">Verein</th>
+                                <th class="py-3 px-4 font-bold">Mannschaft</th>
+                                <th class="py-3 px-3 text-center font-bold bg-emerald-950/60 text-emerald-300">Punkte (SP)</th>
+                                <th class="py-3 px-3 text-center font-bold">Runden (RD)</th>
+                                <th class="py-3 px-3 text-center font-bold">Schnitt (Ø)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/70 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: EINZELWERTUNG 2025 -->
+        <section id="tab-single-2025" class="hidden space-y-6">
+            <div class="bg-[#0c1424] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 class="font-bold text-white text-base">Bundesliga-Einzelwertung 2025</h3>
+                    <input type="text" id="search-2025" onkeyup="filterSingleTable('2025')" placeholder="Spieler, Verein oder Mannschaft suchen..." class="bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 w-full sm:w-72 focus:outline-none focus:border-emerald-400">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm" id="table-single-2025">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-300 uppercase tracking-wider text-[11px] border-b border-slate-800">
+                                <th class="py-3 px-3 text-center font-bold w-16">Rang</th>
+                                <th class="py-3 px-4 font-bold">Name, Vorname</th>
+                                <th class="py-3 px-4 font-bold">Verein</th>
+                                <th class="py-3 px-4 font-bold">Mannschaft</th>
+                                <th class="py-3 px-3 text-center font-bold bg-emerald-950/60 text-emerald-300">Punkte (SP)</th>
+                                <th class="py-3 px-3 text-center font-bold">Runden (RD)</th>
+                                <th class="py-3 px-3 text-center font-bold">Schnitt (Ø)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/70 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: EHRENTAFEL MEISTER -->
+        <section id="tab-ehre-meister" class="hidden space-y-6">
+            <div class="bg-[#0c1424] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 class="font-bold text-white text-base flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-amber-400"></i> Ehrentafel Bundesliga (Mannschaftswertung)
+                    </h3>
+                    <input type="text" id="search-ehre-meister" onkeyup="filterGenericTable('table-ehre-meister', 'search-ehre-meister')" placeholder="Saison, Meister oder Spieler suchen..." class="bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 w-full sm:w-72 focus:outline-none focus:border-emerald-400">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm" id="table-ehre-meister">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-300 uppercase tracking-wider text-[11px] border-b border-slate-800">
+                                <th class="py-3 px-3 text-center font-bold w-20">Saison</th>
+                                <th class="py-3 px-4 font-bold">Meister</th>
+                                <th class="py-3 px-3 text-center font-bold bg-emerald-950/60 text-emerald-300">WP</th>
+                                <th class="py-3 px-3 text-center font-bold">SpP</th>
+                                <th class="py-3 px-4 font-bold">Spieler</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/70 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: EHRENTAFEL EINZEL -->
+        <section id="tab-ehre-einzel" class="hidden space-y-6">
+            <div class="bg-[#0c1424] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 class="font-bold text-white text-base flex items-center gap-2">
+                        <i class="fa-solid fa-star text-emerald-400"></i> Ehrentafel Einzelwertung
+                    </h3>
+                    <input type="text" id="search-ehre-einzel" onkeyup="filterGenericTable('table-ehre-einzel', 'search-ehre-einzel')" placeholder="Saison, Spieler oder Verein suchen..." class="bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 w-full sm:w-72 focus:outline-none focus:border-emerald-400">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm" id="table-ehre-einzel">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-300 uppercase tracking-wider text-[11px] border-b border-slate-800">
+                                <th class="py-3 px-3 text-center font-bold w-20">Saison</th>
+                                <th class="py-3 px-4 font-bold">Spieler</th>
+                                <th class="py-3 px-4 font-bold">Verein / Mannschaft</th>
+                                <th class="py-3 px-3 text-center font-bold bg-emerald-950/60 text-emerald-300">Punkte (SP)</th>
+                                <th class="py-3 px-3 text-center font-bold">Schnitt (Ø)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/70 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: EWIGE BESTENLISTE (MIT FILTER, SEITENBLÄTTERN & 7-WETTBEWERBE-AUFKLAPPFUNKTION) -->
+        <section id="tab-ewige" class="hidden space-y-6">
+            <div class="bg-[#0c1424] rounded-2xl border border-emerald-500/25 shadow-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 space-y-3 bg-gradient-to-r from-[#0d192b] to-[#0c1424]">
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="font-bold text-white text-base flex items-center gap-2">
+                                <i class="fa-solid fa-crown text-amber-400"></i> Ewige Bestenliste (Alle Wettbewerbe)
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Klick auf einen Spieler öffnet alle 7 Wettbewerbe (<strong class="text-emerald-300">RLT, DEM, Regios, DMM, Bundesliga, BL-Quali, SonderT</strong>).</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="inline-flex rounded-xl bg-slate-900 p-1 border border-slate-700">
+                                <button id="ewige-filter-all" onclick="setEwigeClubFilter('all')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 transition">
+                                    Alle Vereine
+                                </button>
+                                <button id="ewige-filter-bot" onclick="setEwigeClubFilter('bot')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-emerald-300 transition">
+                                    Nur BOT DKC
+                                </button>
+                            </div>
+                            <input type="text" id="search-ewige" onkeyup="onEwigeSearchChange()" placeholder="Spieler, Vorname oder Verein..." class="bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 w-full sm:w-64 focus:outline-none focus:border-emerald-400">
+                        </div>
+                    </div>
+
+                    <!-- Legende zur Ewigen Bestenliste -->
+                    <div class="bg-[#080e1a] border border-slate-800/90 rounded-xl px-3.5 py-2.5 text-[11px] text-slate-300 flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span class="font-bold text-emerald-400"><i class="fa-solid fa-circle-info mr-1"></i>Legende:</span>
+                        <span><strong>TN</strong> = Teilnahmen bzw. Saisons</span>
+                        <span><strong>S</strong> = Siege bzw. Gewinn der Einzelwertung bei Mannschaftswettbewerben</span>
+                        <span><strong>Titel</strong> = Mannschaftstitel (z. B. Deutscher Meister)</span>
+                        <span><strong>RLT</strong> = Turniere mit 3 oder mehr Runden</span>
+                        <span><strong>SonderT</strong> = Kürzere / ausdrücklich so angesetzte Turniere</span>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm" id="table-ewige">
+                        <thead>
+                            <tr class="bg-slate-900/95 text-slate-300 uppercase tracking-wider text-[11px] border-b border-emerald-500/25">
+                                <th class="py-3 px-3 text-center font-bold w-16">Rang</th>
+                                <th class="py-3 px-4 font-bold">Name, Vorname</th>
+                                <th class="py-3 px-4 font-bold">Verein</th>
+                                <th class="py-3 px-3 text-center font-bold bg-emerald-950/60 text-emerald-300">Gesamt-P</th>
+                                <th class="py-3 px-3 text-center font-bold">Runden (RD)</th>
+                                <th class="py-3 px-3 text-center font-bold">Schnitt (Ø)</th>
+                                <th class="py-3 px-3 text-center font-bold">Siege / Titel</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/70 font-medium"></tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Bar -->
+                <div id="ewige-pagination" class="hidden px-4 py-3 bg-[#080e1a] border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+                    <span id="ewige-page-info"></span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="changeEwigePage(-1)" id="ewige-prev-btn" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 disabled:opacity-40">
+                            &larr; Zurück
+                        </button>
+                        <button onclick="changeEwigePage(1)" id="ewige-next-btn" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 disabled:opacity-40">
+                            Weiter &rarr;
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB: ADMIN-BEREICH -->
+        <section id="tab-admin" class="hidden space-y-6">
+            <div class="bg-[#0c1424] p-4 sm:p-6 rounded-2xl border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-emerald-400"></i> Admin-Zentrale: BOT DKC
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-1">Du bleibst im Admin-Modus angemeldet, bis du oben rechts erneut auf den Admin-Button klickst.</p>
+                </div>
+                <button onclick="switchTab('schedule')" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition self-start sm:self-auto">
+                    Zurück zu Spieltage &amp; Gruppen
+                </button>
+            </div>
+
+            <!-- 1. CSV-IMPORT FÜR ALLE RUBRIKEN -->
+            <div class="bg-[#0c1424] p-5 sm:p-6 rounded-2xl border border-emerald-500/35 shadow-xl space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                    <div>
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-file-csv text-emerald-400 text-lg"></i> 1. CSV-Import (Überschreibt die aktuelle Liste in Supabase)
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Unterstützt <code class="text-emerald-300">Gesamtdatei Bundesliga.csv</code>, <code class="text-emerald-300">alle-ewig.csv</code> (alle 7 Wettbewerbe) sowie Einzelwertungen 2027, 2026 und 2025.</p>
+                    </div>
+                    <span class="text-[11px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full self-start sm:self-auto">
+                        Vorschau vor Übernahme
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Ziel-Rubrik auswählen</label>
+                        <select id="csv-target-select" onchange="onCsvTargetChange()" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-400 font-semibold">
+                            <option value="gesamtdatei">Gesamtdatei Bundesliga (Kader + Historie 1998–2027)</option>
+                            <option value="kader">Kaderliste BOT DKC (einfache Spieler-CSV)</option>
+                            <option value="2027">Einzelwertung 2027</option>
+                            <option value="2026">Einzelwertung 2026</option>
+                            <option value="2025">Einzelwertung 2025</option>
+                            <option value="ehre-meister">Ehrentafel Meister</option>
+                            <option value="ehre-einzel">Ehrentafel Einzel</option>
+                            <option value="ewige">Ewige Bestenliste (alle-ewig.csv)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">CSV-Datei auswählen</label>
+                        <input type="file" id="csv-file-input" accept=".csv,.txt" onchange="handleCsvFileSelect(event)" class="block w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-500 file:text-slate-950 hover:file:bg-emerald-400 bg-slate-900 border border-slate-700 rounded-xl cursor-pointer">
+                    </div>
+                </div>
+
+                <div id="csv-mapping-panel" class="hidden bg-[#080e1a] border border-slate-800 rounded-xl p-4 space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <span class="text-xs font-bold text-slate-200"><i class="fa-solid fa-sliders text-emerald-400 mr-1.5"></i>Erkennung &amp; Spalten-Zuordnung</span>
+                        <span id="csv-meta-info" class="text-[11px] text-slate-400"></span>
+                    </div>
+                    <div id="csv-mapping-fields" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-xs"></div>
+                </div>
+
+                <div id="csv-preview-panel" class="hidden space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <span id="csv-preview-summary" class="text-xs font-semibold text-emerald-400"></span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="resetCsvImport()" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition">
+                                Zurücksetzen
+                            </button>
+                            <button id="csv-apply-btn" onclick="applyCsvImport()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 glow-green-btn">
+                                <i class="fa-solid fa-check"></i> Übernehmen
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto max-h-64 rounded-xl border border-slate-800">
+                        <table class="w-full text-left border-collapse text-xs" id="csv-preview-table">
+                            <thead class="bg-slate-900 text-slate-300 uppercase text-[10px] sticky top-0"></thead>
+                            <tbody class="divide-y divide-slate-800/70 bg-[#080e1a]"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. MANUELLE SPIELTAGE, TERMINE & DOPPELSPIELTAG-GRUPPEN -->
+            <div class="bg-[#0c1424] p-5 sm:p-6 rounded-2xl border border-slate-800 shadow-xl space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-plus text-emerald-400"></i> 2. Spieltage, Termine &amp; Doppelspieltag-Gruppen
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Spieltag 1 &amp; 2 (bzw. 3 &amp; 4 usw.) sind Doppelspieltage mit identischen Gruppen; Ergebnisse gelten je Spieltag.</p>
+                    </div>
+                    <button onclick="addNewMatchday()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 self-start sm:self-auto glow-green-btn">
+                        <i class="fa-solid fa-plus"></i> Neuer Spieltag
+                    </button>
+                </div>
+
+                <div class="flex flex-wrap gap-2" id="admin-matchday-buttons"></div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-[#080e1a] p-4 rounded-xl border border-slate-800 items-end">
+                    <div class="sm:col-span-3">
+                        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Spieltag-Bezeichnung</label>
+                        <input type="text" id="admin-md-title" oninput="updateCurrentMatchdayMeta()" placeholder="z. B. 1. Spieltag" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-400">
+                    </div>
+                    <div class="sm:col-span-4">
+                        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Termin / Datum &amp; Ort</label>
+                        <input type="text" id="admin-md-date" oninput="updateCurrentMatchdayMeta()" placeholder="z. B. Samstag, 13.03.2027 · 10:00 Uhr" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-400">
+                    </div>
+                    <div class="sm:col-span-5 flex flex-wrap sm:justify-end gap-2">
+                        <button id="copy-partner-groups-btn" onclick="copyGroupsFromPartnerMatchday()" class="hidden px-3 py-2 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-copy"></i> <span id="copy-partner-groups-label">Gruppen vom Partner-Spieltag kopieren</span>
+                        </button>
+                        <button onclick="deleteCurrentMatchday()" class="px-3 py-2 bg-red-950/60 hover:bg-red-900/70 text-red-300 border border-red-800/60 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-trash"></i> Löschen
+                        </button>
+                    </div>
+                </div>
+
+                <div id="admin-groups-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+
+                <div class="flex justify-end pt-2">
+                    <button onclick="saveMatchdaysAndResults()" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition flex items-center gap-2 glow-green-btn">
+                        <i class="fa-solid fa-floppy-disk"></i> Spieltag, Termine &amp; Mannschaften in Supabase speichern
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-[#0b1120] border-t border-emerald-500/15 mt-12 py-6 text-center text-xs text-slate-500">
+        <p><span class="text-emerald-400 font-semibold">BOT DKC</span> &bull; Doppelkopf Bundesliga Manager &copy; 2027 &bull; Webmanagement Jürgen Schützendorf</p>
+    </footer>
+
+    <!-- Modal: Spieler-Anmeldung -->
+    <div id="player-login-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-[#0c1424] border border-emerald-500/35 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                    <i class="fa-solid fa-user-check text-emerald-400"></i> Spieler anmelden
+                </h3>
+                <button onclick="closePlayerLoginModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-400">Wähle deinen Namen aus dem BOT DKC Kader oder gib ihn einmalig ein. Danach genügt im Cockpit ein Klick auf Zusage oder Absage.</p>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1">Aus Kader wählen</label>
+                    <select id="modal-player-select" onchange="document.getElementById('modal-player-input').value = this.value" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-400">
+                        <option value="">-- Spieler auswählen --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1">Oder Name eingeben</label>
+                    <input type="text" id="modal-player-input" placeholder="Dein Name..." class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-400">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closePlayerLoginModal()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700">Abbrechen</button>
+                <button onclick="confirmPlayerLoginModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl glow-green-btn">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://lhusylpjnujlqomougmg.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_yXEueWILvAq-Vm2VfTuYyg_BIQeE1KK';
+
+        const ADMIN_PASSWORD = '9878';
+        const OUR_TEAM_NAME = 'BOT DKC';
+
+        const STORAGE_KEYS = {
+            adminLoggedIn: 'botdkc_admin_logged_in_sb_v2',
+            activePlayer: 'botdkc_active_player_sb_v2',
+            matchdays: 'botdkc_matchdays_sb_v2',
+            kader: 'botdkc_kader_sb_v2',
+            teamHistory: 'botdkc_team_history_sb_v2',
+            single2027: 'botdkc_single_2027_sb_v2',
+            single2026: 'botdkc_single_2026_sb_v2',
+            single2025: 'botdkc_single_2025_sb_v2',
+            ehreMeister: 'botdkc_ehre_meister_sb_v2',
+            ehreEinzel: 'botdkc_ehre_einzel_sb_v2',
+            ewige: 'botdkc_ewige_sb_v2'
+        };
+
+        let sbClient = null;
+        let isAdminAuthenticated = false;
+        let activePlayerName = '';
+        let matchdays = [];
+        let KADER_DATA = [];
+        let TEAM_HISTORY_DATA = [];
+        let expandedKaderKeys = new Set();
+
+        let SINGLE_DATA = { '2027': [], '2026': [], '2025': [] };
+        let EHRE_MEISTER_DATA = [];
+        let EHRE_EINZEL_DATA = [];
+        let EWIGE_DATA = [];
+        let ewigeClubFilter = 'all';
+        let ewigePage = 1;
+        const EWIGE_PAGE_SIZE = 100;
+        let expandedEwigeRanks = new Set();
+
+        let currentAdminMatchdayId = null;
+
+        let csvParsed = {
+            target: 'gesamtdatei',
+            delimiter: ';',
+            headerRowIndex: 0,
+            headers: [],
+            rows: [],
+            rawAllLines: [],
+            mapping: {},
+            ewigeMultiResult: null
+        };
+
+        function escapeJsSingleQuote(str) {
+            return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
+        function initSupabaseClient() {
+            try {
+                if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+                    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    document.getElementById('db-sync-badge')?.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error('Supabase init error:', e);
+            }
+        }
+
+        function createEmptyMatchday(id, title = '', date = '', templateGroups = null) {
+            const cloneGroups = templateGroups
+                ? (() => {
+                    const g = {};
+                    for (let i = 1; i <= 4; i++) {
+                        g[i] = (templateGroups[i] || []).map(item => ({
+                            team: item.team || '',
+                            sp: null,
+                            wp: 0,
+                            host: !!item.host
+                        }));
+                    }
+                    return g;
+                })()
+                : null;
+
+            return {
+                id,
+                title: title || `${id}. Spieltag`,
+                date: date || '',
+                responses: {},
+                groups: cloneGroups || {
+                    1: [
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false }
+                    ],
+                    2: [
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false }
+                    ],
+                    3: [
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false }
+                    ],
+                    4: [
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false },
+                        { team: '', sp: null, wp: 0, host: false }
+                    ]
+                }
+            };
+        }
+
+        async function initApp() {
+            initSupabaseClient();
+            loadLocalState();
+
+            if (matchdays.length === 0) {
+                matchdays.push(createEmptyMatchday(1, '1. Spieltag', ''));
+                matchdays.push(createEmptyMatchday(2, '2. Spieltag', ''));
+            }
+            if (!currentAdminMatchdayId) {
+                currentAdminMatchdayId = matchdays[0].id;
+            }
+
+            updateAdminAuthUI();
+            updatePlayerUI();
+            syncPlayerDropdowns();
+            syncKaderSeasonDropdown();
+            renderMatchdayFilter();
+            renderAllViews();
+            updateCsvApplyButtonLabel();
+
+            if (sbClient) {
+                await loadAllFromSupabase();
+            }
+
+            if (!activePlayerName) {
+                openPlayerLoginModal();
+            }
+        }
+
+        function loadLocalState() {
+            isAdminAuthenticated = localStorage.getItem(STORAGE_KEYS.adminLoggedIn) === 'true';
+            activePlayerName = localStorage.getItem(STORAGE_KEYS.activePlayer) || '';
+
+            const readArr = (key) => {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) return [];
+                    const parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    return [];
+                }
+            };
+
+            matchdays = readArr(STORAGE_KEYS.matchdays);
+            matchdays.forEach(md => {
+                if (!md.responses || typeof md.responses !== 'object') md.responses = {};
+            });
+            KADER_DATA = readArr(STORAGE_KEYS.kader);
+            TEAM_HISTORY_DATA = readArr(STORAGE_KEYS.teamHistory);
+            SINGLE_DATA['2027'] = readArr(STORAGE_KEYS.single2027);
+            SINGLE_DATA['2026'] = readArr(STORAGE_KEYS.single2026);
+            SINGLE_DATA['2025'] = readArr(STORAGE_KEYS.single2025);
+            EHRE_MEISTER_DATA = readArr(STORAGE_KEYS.ehreMeister);
+            EHRE_EINZEL_DATA = readArr(STORAGE_KEYS.ehreEinzel);
+            EWIGE_DATA = readArr(STORAGE_KEYS.ewige);
+        }
+
+        function saveLocalCache() {
+            try {
+                localStorage.setItem(STORAGE_KEYS.matchdays, JSON.stringify(matchdays));
+                localStorage.setItem(STORAGE_KEYS.kader, JSON.stringify(KADER_DATA));
+                localStorage.setItem(STORAGE_KEYS.teamHistory, JSON.stringify(TEAM_HISTORY_DATA));
+                localStorage.setItem(STORAGE_KEYS.single2027, JSON.stringify(SINGLE_DATA['2027'] || []));
+                localStorage.setItem(STORAGE_KEYS.single2026, JSON.stringify(SINGLE_DATA['2026'] || []));
+                localStorage.setItem(STORAGE_KEYS.single2025, JSON.stringify(SINGLE_DATA['2025'] || []));
+                localStorage.setItem(STORAGE_KEYS.ehreMeister, JSON.stringify(EHRE_MEISTER_DATA));
+                localStorage.setItem(STORAGE_KEYS.ehreEinzel, JSON.stringify(EHRE_EINZEL_DATA));
+                localStorage.setItem(STORAGE_KEYS.ewige, JSON.stringify(EWIGE_DATA));
+            } catch (e) {
+                console.warn('LocalStorage Cache-Limit erreicht (Supabase hält alle Daten):', e);
+            }
+        }
+
+        async function fetchAllEwigeFromSupabase() {
+            if (!sbClient) return [];
+            const all = [];
+            const pageSize = 1000;
+            let from = 0;
+            while (true) {
+                const { data, error } = await sbClient
+                    .from('doko_ewige_bestenliste')
+                    .select('*')
+                    .order('rank', { ascending: true })
+                    .range(from, from + pageSize - 1);
+                if (error || !Array.isArray(data) || data.length === 0) break;
+                all.push(...data);
+                if (data.length < pageSize) break;
+                from += pageSize;
+            }
+            return all;
+        }
+
+        async function loadAllFromSupabase() {
+            if (!sbClient) return;
+            try {
+                const [mdRes, kaderRes, singleRes, emRes, eeRes, ewRows] = await Promise.all([
+                    sbClient.from('doko_matchdays').select('*').order('id', { ascending: true }),
+                    sbClient.from('doko_kader').select('*').order('sort_order', { ascending: true }),
+                    sbClient.from('doko_single_rankings').select('*').in('season', ['2025', '2026', '2027']).order('rank', { ascending: true }),
+                    sbClient.from('doko_ehrentafel_meister').select('*').order('sort_order', { ascending: true }),
+                    sbClient.from('doko_ehrentafel_einzel').select('*').order('sort_order', { ascending: true }),
+                    fetchAllEwigeFromSupabase()
+                ]);
+
+                if (!mdRes.error && Array.isArray(mdRes.data) && mdRes.data.length > 0) {
+                    matchdays = mdRes.data.map(row => ({
+                        id: Number(row.id),
+                        title: row.title || `${row.id}. Spieltag`,
+                        date: row.date_label || '',
+                        groups: row.groups && typeof row.groups === 'object' ? row.groups : createEmptyMatchday(row.id).groups,
+                        responses: row.responses && typeof row.responses === 'object' ? row.responses : {}
+                    }));
+                    currentAdminMatchdayId = matchdays[0].id;
+                }
+
+                if (!kaderRes.error && Array.isArray(kaderRes.data) && kaderRes.data.length > 0) {
+                    const players = kaderRes.data
+                        .filter(r => r.record_type === 'player')
+                        .map(r => ({
+                            name: r.name,
+                            info: r.info || '',
+                            pts2027: r.pts2027 !== null ? Number(r.pts2027) : 0,
+                            rd2027: r.rd2027 !== null ? Number(r.rd2027) : 0,
+                            avg2027: r.avg2027 !== null ? Number(r.avg2027) : 0,
+                            totalPts: r.total_pts !== null ? Number(r.total_pts) : null,
+                            totalRd: r.total_rd !== null ? Number(r.total_rd) : null,
+                            totalAvg: r.total_avg !== null ? Number(r.total_avg) : null,
+                            seasons: r.seasons && typeof r.seasons === 'object' ? r.seasons : {}
+                        }));
+
+                    const teamHist = kaderRes.data
+                        .filter(r => r.record_type === 'team_season')
+                        .map(r => ({
+                            season: r.season_label || r.name,
+                            placement: r.placement || '',
+                            pts: r.total_pts !== null ? Number(r.total_pts) : null,
+                            rd: r.total_rd !== null ? Number(r.total_rd) : null,
+                            avg: r.total_avg !== null ? Number(r.total_avg) : null
+                        }));
+
+                    if (players.length > 0) KADER_DATA = players;
+                    if (teamHist.length > 0) TEAM_HISTORY_DATA = teamHist;
+                }
+
+                if (!singleRes.error && Array.isArray(singleRes.data)) {
+                    const grouped = { '2027': [], '2026': [], '2025': [] };
+                    singleRes.data.forEach(r => {
+                        if (grouped[r.season]) {
+                            grouped[r.season].push({
+                                rank: Number(r.rank),
+                                name: r.name,
+                                club: r.club || '',
+                                team: r.team || '',
+                                pts: Number(r.pts),
+                                rd: Number(r.rd),
+                                avg: Number(r.avg)
+                            });
+                        }
+                    });
+                    if (grouped['2027'].length > 0) SINGLE_DATA['2027'] = grouped['2027'];
+                    if (grouped['2026'].length > 0) SINGLE_DATA['2026'] = grouped['2026'];
+                    if (grouped['2025'].length > 0) SINGLE_DATA['2025'] = grouped['2025'];
+                }
+
+                if (!emRes.error && Array.isArray(emRes.data) && emRes.data.length > 0) {
+                    EHRE_MEISTER_DATA = emRes.data.map(r => ({
+                        season: r.season,
+                        champion: r.champion,
+                        wp: r.wp !== null ? Number(r.wp) : null,
+                        spp: r.spp !== null ? Number(r.spp) : null,
+                        players: Array.isArray(r.players) ? r.players : []
+                    }));
+                }
+
+                if (!eeRes.error && Array.isArray(eeRes.data) && eeRes.data.length > 0) {
+                    EHRE_EINZEL_DATA = eeRes.data.map(r => ({
+                        season: r.season,
+                        name: r.name,
+                        club: r.club || '',
+                        pts: Number(r.pts),
+                        avg: Number(r.avg)
+                    }));
+                }
+
+                if (Array.isArray(ewRows) && ewRows.length > 0) {
+                    EWIGE_DATA = ewRows.map(r => ({
+                        rank: Number(r.rank),
+                        name: r.name,
+                        club: r.club || '',
+                        pts: Number(r.pts),
+                        rd: Number(r.rd),
+                        avg: Number(r.avg),
+                        titles: r.titles !== undefined && r.titles !== null ? Number(r.titles) : 0,
+                        competitions: r.competitions && typeof r.competitions === 'object' ? r.competitions : {}
+                    }));
+                }
+
+                saveLocalCache();
+                syncPlayerDropdowns();
+                syncKaderSeasonDropdown();
+                renderMatchdayFilter();
+                renderAllViews();
+            } catch (e) {
+                console.error('Fehler beim Laden aus Supabase:', e);
+            }
+        }
+
+        async function syncMatchdaysToSupabase() {
+            saveLocalCache();
+            if (!sbClient) return;
+            try {
+                const payload = matchdays.map(md => ({
+                    id: Number(md.id),
+                    title: md.title || `${md.id}. Spieltag`,
+                    date_label: md.date || '',
+                    groups: md.groups || {},
+                    responses: md.responses || {},
+                    updated_at: new Date().toISOString()
+                }));
+                const { error } = await sbClient.from('doko_matchdays').upsert(payload, { onConflict: 'id' });
+                if (error) throw error;
+            } catch (e) {
+                console.error('Supabase Spieltag-Sync Fehler:', e);
+                showNotification('Lokaler Stand gespeichert – Supabase-Sync bitte prüfen.', 'error');
+            }
+        }
+
+        async function deleteMatchdayFromSupabase(mdId) {
+            if (!sbClient) return;
+            try {
+                await sbClient.from('doko_matchdays').delete().eq('id', Number(mdId));
+            } catch (e) {
+                console.error('Supabase Löschen Fehler:', e);
+            }
+        }
+
+        async function replaceKaderInSupabase() {
+            saveLocalCache();
+            if (!sbClient) return;
+            try {
+                await sbClient.from('doko_kader').delete().neq('id', 0);
+
+                const rows = [];
+                KADER_DATA.forEach((p, idx) => {
+                    rows.push({
+                        record_type: 'player',
+                        name: p.name,
+                        info: p.info || '',
+                        season_label: '',
+                        placement: '',
+                        pts2027: p.pts2027 ?? 0,
+                        rd2027: p.rd2027 ?? 0,
+                        avg2027: p.avg2027 ?? 0,
+                        total_pts: p.totalPts ?? null,
+                        total_rd: p.totalRd ?? null,
+                        total_avg: p.totalAvg ?? null,
+                        seasons: p.seasons || {},
+                        sort_order: idx + 1,
+                        updated_at: new Date().toISOString()
+                    });
+                });
+
+                TEAM_HISTORY_DATA.forEach((t, idx) => {
+                    rows.push({
+                        record_type: 'team_season',
+                        name: t.season,
+                        info: '',
+                        season_label: t.season,
+                        placement: t.placement || '',
+                        pts2027: 0,
+                        rd2027: 0,
+                        avg2027: 0,
+                        total_pts: t.pts ?? null,
+                        total_rd: t.rd ?? null,
+                        total_avg: t.avg ?? null,
+                        seasons: {},
+                        sort_order: 1000 + idx,
+                        updated_at: new Date().toISOString()
+                    });
+                });
+
+                if (rows.length > 0) {
+                    const { error } = await sbClient.from('doko_kader').insert(rows);
+                    if (error) throw error;
+                }
+            } catch (e) {
+                console.error('Supabase Kader-Sync Fehler:', e);
+                showNotification('Kader lokal aktualisiert – Supabase-Sync bitte prüfen.', 'error');
+            }
+        }
+
+        async function replaceSingleSeasonInSupabase(season, list) {
+            saveLocalCache();
+            if (!sbClient) return;
+            try {
+                await sbClient.from('doko_single_rankings').delete().eq('season', season);
+                if (list.length > 0) {
+                    const rows = list.map(item => ({
+                        season,
+                        rank: Number(item.rank),
+                        name: item.name,
+                        club: item.club || '',
+                        team: item.team || '',
+                        pts: Number(item.pts),
+                        rd: Number(item.rd),
+                        avg: Number(item.avg),
+                        updated_at: new Date().toISOString()
+                    }));
+                    const { error } = await sbClient.from('doko_single_rankings').insert(rows);
+                    if (error) throw error;
+                }
+            } catch (e) {
+                console.error('Supabase Einzelwertung-Sync Fehler:', e);
+            }
+        }
+
+        async function replaceEhreMeisterInSupabase(list) {
+            saveLocalCache();
+            if (!sbClient) return;
+            try {
+                await sbClient.from('doko_ehrentafel_meister').delete().neq('id', 0);
+                if (list.length > 0) {
+                    const rows = list.map((item, idx) => ({
+                        season: item.season,
+                        champion: item.champion,
+                        wp: item.wp ?? null,
+                        spp: item.spp ?? null,
+                        players: item.players || [],
+                        sort_order: idx + 1,
+                        updated_at: new Date().toISOString()
+                    }));
+                    const { error } = await sbClient.from('doko_ehrentafel_meister').insert(rows);
+                    if (error) throw error;
+                }
+            } catch (e) {
+                console.error('Supabase Ehrentafel Meister Fehler:', e);
+            }
+        }
+
+        async function replaceEhreEinzelInSupabase(list) {
+            saveLocalCache();
+            if (!sbClient) return;
+            try {
+                await sbClient.from('doko_ehrentafel_einzel').delete().neq('id', 0);
+                if (list.length > 0) {
+                    const rows = list.map((item, idx) => ({
+                        season: item.season,
+                        name: item.name,
+                        club: item.club || '',
+                        pts: Number(item.pts),
+                        avg: Number(item.avg),
+                        sort_order: idx + 1,
+                        updated_at: new Date().toISOString()
+                    }));
+                    const { error } = await sbClient.from('doko_ehrentafel_einzel').insert(rows);
+                    if (error) throw error;
+                }
+            } catch (e) {
+                console.error('Supabase Ehrentafel Einzel Fehler:', e);
+            }
+        }
+
+        async function replaceEwigeInSupabase(list) {
+            saveLocalCache();
+            if (!sbClient) return;
+            try {
+                await sbClient.from('doko_ewige_bestenliste').delete().neq('id', 0);
+                if (list.length > 0) {
+                    const rows = list.map(item => ({
+                        rank: Number(item.rank),
+                        name: item.name,
+                        club: item.club || '',
+                        pts: Number(item.pts),
+                        rd: Number(item.rd),
+                        avg: Number(item.avg),
+                        titles: Number(item.titles || 0),
+                        competitions: item.competitions || {},
+                        updated_at: new Date().toISOString()
+                    }));
+
+                    const chunkSize = 500;
+                    for (let i = 0; i < rows.length; i += chunkSize) {
+                        const chunk = rows.slice(i, i + chunkSize);
+                        const { error } = await sbClient.from('doko_ewige_bestenliste').insert(chunk);
+                        if (error) throw error;
+                    }
+                }
+            } catch (e) {
+                console.error('Supabase Ewige Bestenliste Fehler:', e);
+                showNotification('Ewige Bestenliste lokal geladen – bitte SQL-Spalten (titles, competitions) in Supabase prüfen.', 'error');
+            }
+        }
+
+        function renderAllViews() {
+            renderTable();
+            renderScheduleView();
+            renderKaderTable();
+            renderTeamHistoryStrip();
+            renderBotSingle2027Table();
+            ['2027', '2026', '2025'].forEach(yr => populateSingleTable(yr, SINGLE_DATA[yr]));
+            populateEhreMeisterTable();
+            populateEhreEinzelTable();
+            populateEwigeTable();
+            updateBotDkcDashboardCard();
+            renderAdminView();
+        }
+
+        function toggleAdminAuth() {
+            if (isAdminAuthenticated) {
+                isAdminAuthenticated = false;
+                localStorage.setItem(STORAGE_KEYS.adminLoggedIn, 'false');
+                updateAdminAuthUI();
+                const adminTab = document.getElementById('tab-admin');
+                if (adminTab && !adminTab.classList.contains('hidden')) {
+                    switchTab('schedule');
+                }
+                showNotification('Admin-Modus abgemeldet.', 'success');
+                return;
+            }
+
+            const pwd = prompt('Bitte Admin-Passwort eingeben:');
+            if (pwd === ADMIN_PASSWORD) {
+                isAdminAuthenticated = true;
+                localStorage.setItem(STORAGE_KEYS.adminLoggedIn, 'true');
+                updateAdminAuthUI();
+                switchTab('admin');
+                showNotification('Admin angemeldet. Du bleibst angemeldet, bis du erneut auf Admin klickst.', 'success');
+            } else if (pwd !== null) {
+                alert('Falsches Passwort!');
+            }
+        }
+
+        function updateAdminAuthUI() {
+            const btn = document.getElementById('admin-toggle-btn');
+            const icon = document.getElementById('admin-toggle-icon');
+            const label = document.getElementById('admin-toggle-label');
+            const openBtn = document.getElementById('admin-open-btn');
+
+            if (isAdminAuthenticated) {
+                btn.className = 'px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 hover:bg-emerald-500/30';
+                icon.className = 'fa-solid fa-lock-open text-[10px] text-emerald-400';
+                label.textContent = 'Admin aktiv (Abmelden)';
+                if (openBtn) {
+                    openBtn.classList.remove('hidden');
+                    openBtn.classList.add('flex');
+                }
+            } else {
+                btn.className = 'px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 border border-slate-800';
+                icon.className = 'fa-solid fa-lock text-[10px]';
+                label.textContent = 'Admin';
+                if (openBtn) {
+                    openBtn.classList.add('hidden');
+                    openBtn.classList.remove('flex');
+                }
+            }
+        }
+
+        function setActivePlayer(name) {
+            activePlayerName = (name || '').trim();
+            localStorage.setItem(STORAGE_KEYS.activePlayer, activePlayerName);
+            updatePlayerUI();
+            renderScheduleView();
+            updateBotDkcDashboardCard();
+        }
+
+        function updatePlayerUI() {
+            const headerName = document.getElementById('header-player-name');
+            const cockpitLabel = document.getElementById('cockpit-player-label');
+            if (headerName) headerName.textContent = activePlayerName || 'Spieler wählen...';
+            if (cockpitLabel) cockpitLabel.textContent = activePlayerName || 'Bitte anmelden';
+        }
+
+        function syncPlayerDropdowns() {
+            const names = KADER_DATA.map(p => p.name).filter(Boolean);
+            const html = `<option value="">-- Spieler auswählen --</option>` +
+                names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+            const modalSel = document.getElementById('modal-player-select');
+            if (modalSel) modalSel.innerHTML = html;
+            updatePlayerUI();
+        }
+
+        function openPlayerLoginModal() {
+            const modal = document.getElementById('player-login-modal');
+            const input = document.getElementById('modal-player-input');
+            const select = document.getElementById('modal-player-select');
+            if (input) input.value = activePlayerName;
+            if (select) {
+                const found = Array.from(select.options).find(o => o.value === activePlayerName);
+                select.value = found ? activePlayerName : '';
+            }
+            modal?.classList.remove('hidden');
+        }
+
+        function closePlayerLoginModal() {
+            document.getElementById('player-login-modal')?.classList.add('hidden');
+        }
+
+        function confirmPlayerLoginModal() {
+            const val = (document.getElementById('modal-player-input')?.value || '').trim();
+            if (!val) {
+                showNotification('Bitte einen Spielernamen eingeben.', 'error');
+                return;
+            }
+            setActivePlayer(val);
+            closePlayerLoginModal();
+            showNotification(`Angemeldet als ${val}.`, 'success');
+        }
+
+        async function setMatchdayAttendance(matchdayId, status) {
+            if (!activePlayerName) {
+                openPlayerLoginModal();
+                showNotification('Bitte zuerst deinen Spielernamen eingeben.', 'error');
+                return;
+            }
+            const md = matchdays.find(m => m.id === matchdayId);
+            if (!md) return;
+            if (!md.responses) md.responses = {};
+
+            if (md.responses[activePlayerName] === status) {
+                delete md.responses[activePlayerName];
+            } else {
+                md.responses[activePlayerName] = status;
+            }
+
+            renderScheduleView();
+            updateBotDkcDashboardCard();
+            await syncMatchdaysToSupabase();
+        }
+
+        function normalizeNameKey(name) {
+            return String(name || '').toLowerCase().replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function formatSignedOrDash(val, decimals = 0) {
+            if (val === null || val === undefined || Number.isNaN(val)) return '–';
+            const num = decimals > 0 ? Number(val).toFixed(decimals) : Number(val).toLocaleString('de-DE');
+            return val > 0 ? `+${num}` : num;
+        }
+
+        function isChampionPlacement(placementStr) {
+            const p = String(placementStr || '').trim().toLowerCase();
+            return p === '1.' || p === '1' || p === '1. platz' || p === 'meister';
+        }
+
+        function getBotDkcSingle2027() {
+            const list2027 = SINGLE_DATA['2027'] || [];
+            const kaderKeys = new Set(KADER_DATA.map(k => normalizeNameKey(k.name)));
+
+            const filtered = list2027.filter(item => {
+                const clubTeam = `${item.club || ''} ${item.team || ''}`.toUpperCase();
+                const inClub = clubTeam.includes(OUR_TEAM_NAME);
+                const inKader = kaderKeys.size > 0 && kaderKeys.has(normalizeNameKey(item.name));
+                return inClub || inKader;
+            });
+
+            return filtered
+                .sort((a, b) => (b.pts - a.pts) || (b.rd - a.rd))
+                .map((item, idx) => ({ clubRank: idx + 1, ...item }));
+        }
+
+        function updateBotDkcDashboardCard() {
+            const standingBox = document.getElementById('botdkc-standing-box');
+            const standings = calculateStandings();
+            const botIdx = standings.findIndex(t => t.name.toUpperCase().includes(OUR_TEAM_NAME));
+            if (standingBox) {
+                if (botIdx === -1) {
+                    const lastPlace = TEAM_HISTORY_DATA.find(t => t.placement)?.placement;
+                    standingBox.innerHTML = `<div class="text-xs text-slate-400">Saison 2027 noch ohne Spieltag${lastPlace ? ` · Letzte Platzierung: <strong class="text-emerald-400">${lastPlace}</strong>` : ''}.</div>`;
+                } else {
+                    const team = standings[botIdx];
+                    const rank = botIdx + 1;
+                    const spTxt = team.totalSpielP > 0 ? `+${team.totalSpielP}` : `${team.totalSpielP}`;
+                    standingBox.innerHTML = `
+                        <div class="flex items-baseline justify-between gap-2">
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-2xl font-extrabold text-emerald-400">${rank}. Platz</span>
+                                <span class="text-xs text-slate-400">von ${standings.length}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-sm font-extrabold text-white">${team.totalWertP} WP</span>
+                                <span class="text-xs text-emerald-400 ml-1.5">(${spTxt} SpP)</span>
+                            </div>
+                        </div>
+                        <div class="text-[11px] text-slate-400 mt-1.5 truncate">${team.name}</div>
+                    `;
+                }
+            }
+
+            const top3Box = document.getElementById('top3-2027-list');
+            if (top3Box) {
+                const botList = getBotDkcSingle2027();
+                if (botList.length === 0) {
+                    top3Box.innerHTML = `<div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/60 text-slate-500 text-center">Ab 2027 nach 1. Spieltag per CSV</div>`;
+                } else {
+                    top3Box.innerHTML = botList.slice(0, 3).map((p, idx) => `
+                        <div class="flex items-center justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800/80">
+                            <span class="text-slate-100 font-medium truncate pr-2"><strong class="text-emerald-400">${idx + 1}.</strong> ${p.name}</span>
+                            <span class="font-bold text-emerald-400 shrink-0">${p.pts} SP <span class="text-[10px] text-slate-400 font-normal">(Liga #${p.rank})</span></span>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            const statsBox = document.getElementById('botdkc-player-stats-box');
+            if (statsBox) {
+                const sorted = getSortedKader('2027');
+                if (sorted.length === 0) {
+                    statsBox.innerHTML = `<div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/60 text-slate-500 text-center">Kader im Admin laden (Start 2027)</div>`;
+                } else {
+                    statsBox.innerHTML = sorted.slice(0, 3).map((p, idx) => `
+                        <div class="flex items-center justify-between py-1 px-2.5 rounded bg-slate-900/80 border border-slate-800/80">
+                            <span class="text-slate-100 font-medium truncate pr-2"><strong class="text-emerald-400">${idx + 1}.</strong> ${p.name}</span>
+                            <span class="text-[11px] text-emerald-400 font-bold shrink-0">${formatSignedOrDash(p.activePts)} Pkt. <span class="text-slate-400 font-normal">(${p.activeRd ?? 0} Rd.)</span></span>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            const cockpitMdList = document.getElementById('cockpit-all-matchdays-list');
+            if (cockpitMdList) {
+                if (matchdays.length === 0) {
+                    cockpitMdList.innerHTML = `<div class="text-xs text-slate-500 col-span-2">Noch keine Spieltage angelegt.</div>`;
+                } else {
+                    cockpitMdList.innerHTML = matchdays.map((md, idx) => {
+                        const pairNum = Math.floor(idx / 2) + 1;
+                        const responses = md.responses || {};
+                        const yesNames = Object.entries(responses).filter(([, v]) => v === 'yes').map(([n]) => n);
+                        const noNames = Object.entries(responses).filter(([, v]) => v === 'no').map(([n]) => n);
+                        const myStatus = activePlayerName ? responses[activePlayerName] : null;
+
+                        return `
+                            <div class="bg-[#0b1322] border border-slate-800 hover:border-emerald-500/30 rounded-xl p-3.5 space-y-2.5 flex flex-col justify-between transition">
+                                <div class="flex items-start justify-between gap-2 border-b border-slate-800/90 pb-2">
+                                    <div>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="text-xs font-extrabold text-white">${md.title}</span>
+                                            <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/30 font-semibold">${pairNum}. Doppelspieltag</span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-400 mt-0.5">${md.date || 'Termin offen'}</div>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 shrink-0">
+                                        <button onclick="setMatchdayAttendance(${md.id}, 'yes')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                                            myStatus === 'yes'
+                                                ? 'bg-emerald-400 text-slate-950 shadow-md shadow-emerald-400/30'
+                                                : 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40'
+                                        }">
+                                            Zusage
+                                        </button>
+                                        <button onclick="setMatchdayAttendance(${md.id}, 'no')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                                            myStatus === 'no'
+                                                ? 'bg-red-500 text-white'
+                                                : 'bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-700/50'
+                                        }">
+                                            Absage
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1.5 text-[11px]">
+                                    <div>
+                                        <span class="font-bold text-emerald-400">Zusagen (${yesNames.length}):</span>
+                                        <span class="text-slate-200 ml-1">${yesNames.length > 0 ? yesNames.join(', ') : '–'}</span>
+                                    </div>
+                                    <div>
+                                        <span class="font-bold text-red-400">Absagen (${noNames.length}):</span>
+                                        <span class="text-slate-300 ml-1">${noNames.length > 0 ? noNames.join(', ') : '–'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        function syncKaderSeasonDropdown() {
+            const sel = document.getElementById('kader-season-select');
+            if (!sel) return;
+            const prev = sel.value || '2027';
+            const seasonLabels = new Set(['2027', 'GESAMT']);
+            KADER_DATA.forEach(p => {
+                if (p.seasons) Object.keys(p.seasons).forEach(s => seasonLabels.add(s));
+            });
+            const otherYears = Array.from(seasonLabels)
+                .filter(s => s !== '2027' && s !== 'GESAMT')
+                .sort((a, b) => b.localeCompare(a, 'de'));
+            const ordered = ['2027', ...otherYears, 'GESAMT'];
+
+            sel.innerHTML = ordered.map(s => {
+                if (s === '2027') return `<option value="2027">Saison: 2027 (Aktuell)</option>`;
+                if (s === 'GESAMT') return `<option value="GESAMT">Spalte: GESAMT (Alle Jahre)</option>`;
+                return `<option value="${s}">Saison: ${s}</option>`;
+            }).join('');
+            sel.value = ordered.includes(prev) ? prev : '2027';
+        }
+
+        async function resetKaderTo2027Start() {
+            if (KADER_DATA.length === 0) {
+                showNotification('Kein Kader geladen.', 'error');
+                return;
+            }
+            KADER_DATA = KADER_DATA.map(p => {
+                const seasons = { ...(p.seasons || {}) };
+                seasons['2027'] = { pts: 0, rd: 0, avg: 0 };
+                return {
+                    ...p,
+                    seasons,
+                    pts2027: 0,
+                    rd2027: 0,
+                    avg2027: 0
+                };
+            });
+            const sel = document.getElementById('kader-season-select');
+            if (sel) sel.value = '2027';
+            renderAllViews();
+            await replaceKaderInSupabase();
+            showNotification('BOT DKC Kader auf 2027-Start (0 Pkt. / 0 Rd.) gesetzt und mit Supabase synchronisiert.', 'success');
+        }
+
+        function toggleKaderRowExpand(playerKey) {
+            if (expandedKaderKeys.has(playerKey)) {
+                expandedKaderKeys.delete(playerKey);
+            } else {
+                expandedKaderKeys.add(playerKey);
+            }
+            renderKaderTable();
+        }
+
+        function getSortedKader(seasonMode = '2027') {
+            const list2027 = SINGLE_DATA['2027'] || [];
+            const mapped = KADER_DATA.map(player => {
+                const key = normalizeNameKey(player.name);
+                const s27FromSingle = list2027.find(r => normalizeNameKey(r.name) === key);
+                const seasonsObj = player.seasons || {};
+
+                let activePts = null;
+                let activeRd = null;
+                let activeAvg = null;
+
+                if (seasonMode === '2027') {
+                    if (s27FromSingle) {
+                        activePts = s27FromSingle.pts;
+                        activeRd = s27FromSingle.rd;
+                        activeAvg = s27FromSingle.avg;
+                    } else if (player.pts2027 !== undefined && player.pts2027 !== null) {
+                        activePts = player.pts2027;
+                        activeRd = player.rd2027 ?? 0;
+                        activeAvg = player.avg2027 ?? 0;
+                    } else if (seasonsObj['2027']) {
+                        activePts = seasonsObj['2027'].pts ?? 0;
+                        activeRd = seasonsObj['2027'].rd ?? 0;
+                        activeAvg = seasonsObj['2027'].avg ?? 0;
+                    } else {
+                        activePts = 0;
+                        activeRd = 0;
+                        activeAvg = 0;
+                    }
+                } else if (seasonMode === 'GESAMT') {
+                    activePts = player.totalPts !== undefined && player.totalPts !== null ? player.totalPts : 0;
+                    activeRd = player.totalRd !== undefined && player.totalRd !== null ? player.totalRd : 0;
+                    activeAvg = player.totalAvg !== undefined && player.totalAvg !== null ? player.totalAvg : null;
+                } else {
+                    const sd = seasonsObj[seasonMode];
+                    activePts = sd ? sd.pts : null;
+                    activeRd = sd ? sd.rd : null;
+                    activeAvg = sd ? sd.avg : null;
+                }
+
+                return {
+                    ...player,
+                    key,
+                    seasons: seasonsObj,
+                    activePts,
+                    activeRd,
+                    activeAvg
+                };
+            });
+
+            return mapped.sort((a, b) => {
+                const aHasPts = a.activePts !== null && a.activePts !== undefined;
+                const bHasPts = b.activePts !== null && b.activePts !== undefined;
+                if (aHasPts && !bHasPts) return -1;
+                if (!aHasPts && bHasPts) return 1;
+
+                const ptsA = aHasPts ? a.activePts : 0;
+                const ptsB = bHasPts ? b.activePts : 0;
+                if (ptsB !== ptsA) return ptsB - ptsA;
+
+                const rdA = a.activeRd ?? 0;
+                const rdB = b.activeRd ?? 0;
+                if (rdB !== rdA) return rdB - rdA;
+
+                return a.name.localeCompare(b.name, 'de');
+            });
+        }
+
+        function renderKaderTable() {
+            const tbody = document.querySelector('#table-kader tbody');
+            if (!tbody) return;
+            const seasonMode = document.getElementById('kader-season-select')?.value || '2027';
+
+            const hPts = document.getElementById('kader-col-pts-header');
+            const hRd = document.getElementById('kader-col-rd-header');
+            const hAvg = document.getElementById('kader-col-avg-header');
+            if (hPts) hPts.textContent = seasonMode === 'GESAMT' ? 'Ergebnis (GESAMT)' : `Ergebnis (${seasonMode})`;
+            if (hRd) hRd.textContent = seasonMode === 'GESAMT' ? 'Runden (GESAMT)' : `Runden (${seasonMode})`;
+            if (hAvg) hAvg.textContent = seasonMode === 'GESAMT' ? 'Schnitt (Ø)' : `Schnitt (${seasonMode})`;
+
+            const sorted = getSortedKader(seasonMode);
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500">Noch kein Kader geladen. Bitte im Admin-Bereich die Gesamtdatei Bundesliga.csv oder eine Kader-CSV importieren.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = sorted.map((p, idx) => {
+                const rank = idx + 1;
+                const ptsVal = p.activePts;
+                const rdVal = p.activeRd;
+                const avgVal = p.activeAvg;
+
+                const isExpanded = expandedKaderKeys.has(p.key);
+                const seasonEntries = Object.entries(p.seasons || {})
+                    .filter(([, v]) => v && (v.pts !== null || v.rd !== null || v.avg !== null));
+
+                const rankBadge = rank === 1 ? 'bg-emerald-400 text-slate-950 font-extrabold shadow-sm shadow-emerald-400/40' :
+                                  rank === 2 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 font-bold' :
+                                  rank === 3 ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold' :
+                                  'bg-slate-800 text-slate-300 font-semibold';
+
+                const mainRow = `
+                    <tr onclick="toggleKaderRowExpand('${escapeJsSingleQuote(p.key)}')" class="hover:bg-emerald-950/25 cursor-pointer transition-colors" data-search="${p.name.toLowerCase()}">
+                        <td class="py-3 px-3 text-center">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${rankBadge}">${rank}</span>
+                        </td>
+                        <td class="py-3 px-4 font-bold text-white">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <i class="fa-solid ${isExpanded ? 'fa-chevron-down text-emerald-400' : 'fa-chevron-right text-slate-500'} text-[11px]"></i>
+                                <span>${p.name}</span>
+                                ${seasonEntries.length > 0
+                                    ? `<span class="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700 font-normal">${seasonEntries.length} Saisons</span>`
+                                    : `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">Start 2027</span>`}
+                            </div>
+                        </td>
+                        <td class="py-3 px-3 text-center font-extrabold ${ptsVal > 0 ? 'text-emerald-400' : (ptsVal < 0 ? 'text-red-400' : 'text-slate-200')} bg-emerald-950/20 text-sm">${formatSignedOrDash(ptsVal)}</td>
+                        <td class="py-3 px-3 text-center text-slate-200 font-semibold">${rdVal !== null && rdVal !== undefined ? rdVal : '–'}</td>
+                        <td class="py-3 px-3 text-center font-bold ${avgVal > 0 ? 'text-emerald-300' : (avgVal < 0 ? 'text-red-400' : 'text-slate-300')}">${formatSignedOrDash(avgVal, 2)}</td>
+                    </tr>
+                `;
+
+                let detailRow = '';
+                if (isExpanded) {
+                    const cards = seasonEntries.length === 0
+                        ? `<div class="text-xs text-slate-400">Noch keine abgeschlossenen Bundesliga-Saisons erfasst.</div>`
+                        : seasonEntries.map(([sLabel, sData]) => `
+                            <div class="bg-[#0b1322] border border-emerald-500/20 rounded-lg px-3 py-2 text-xs min-w-[140px]">
+                                <div class="font-bold text-emerald-400 text-[11px] mb-1">${sLabel}</div>
+                                <div class="flex items-center justify-between gap-2 text-[11px]">
+                                    <span class="text-slate-400">Ergebnis:</span>
+                                    <span class="font-bold ${sData.pts > 0 ? 'text-emerald-400' : (sData.pts < 0 ? 'text-red-400' : 'text-slate-200')}">${formatSignedOrDash(sData.pts)}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-2 text-[11px]">
+                                    <span class="text-slate-400">Runden:</span>
+                                    <span class="text-slate-200">${sData.rd ?? '–'}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-2 text-[11px]">
+                                    <span class="text-slate-400">Schnitt:</span>
+                                    <span class="font-semibold text-emerald-300">${formatSignedOrDash(sData.avg, 2)}</span>
+                                </div>
+                            </div>
+                        `).join('');
+
+                    detailRow = `
+                        <tr class="bg-[#070c16]" data-search="${p.name.toLowerCase()}">
+                            <td colspan="5" class="p-4 border-b border-emerald-500/20">
+                                <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2.5">
+                                    Saison-Historie von ${p.name}
+                                </div>
+                                <div class="flex flex-wrap gap-2">${cards}</div>
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                return mainRow + detailRow;
+            }).join('');
+
+            filterKaderTable();
+        }
+
+        function filterKaderTable() {
+            const q = (document.getElementById('search-kader')?.value || '').toLowerCase();
+            document.querySelectorAll('#table-kader tbody tr').forEach(row => {
+                const s = row.getAttribute('data-search') || '';
+                row.style.display = s.includes(q) ? '' : 'none';
+            });
+        }
+
+        function renderTeamHistoryStrip() {
+            const strip = document.getElementById('team-history-strip');
+            const pills = document.getElementById('team-history-pills');
+            if (!strip || !pills) return;
+            if (!TEAM_HISTORY_DATA || TEAM_HISTORY_DATA.length === 0) {
+                strip.classList.add('hidden');
+                return;
+            }
+            strip.classList.remove('hidden');
+            pills.innerHTML = TEAM_HISTORY_DATA
+                .filter(t => t.placement || t.pts !== null)
+                .map(t => {
+                    const isChamp = isChampionPlacement(t.placement);
+                    const pillClass = isChamp
+                        ? 'bg-gradient-to-r from-amber-500/25 via-yellow-500/20 to-amber-500/25 border-amber-400/80 shadow-md shadow-amber-500/20 ring-1 ring-amber-400/40'
+                        : 'bg-[#080e1a] border-emerald-500/25';
+                    const badgeClass = isChamp
+                        ? 'bg-amber-400 text-slate-950 font-extrabold shadow-sm'
+                        : 'bg-emerald-500/20 text-emerald-300 font-bold';
+                    const seasonClass = isChamp ? 'font-extrabold text-amber-300' : 'font-bold text-white';
+
+                    return `
+                        <div class="px-3 py-1.5 rounded-lg border ${pillClass} text-[11px] flex items-center gap-2 transition">
+                            ${isChamp ? '<i class="fa-solid fa-trophy text-amber-400 text-[11px]"></i>' : ''}
+                            <span class="${seasonClass}">${t.season}</span>
+                            ${t.placement ? `<span class="px-1.5 py-0.5 rounded ${badgeClass}">${t.placement}</span>` : ''}
+                            <span class="${isChamp ? 'text-amber-100/90 font-medium' : 'text-slate-400'}">${formatSignedOrDash(t.pts)} / ${t.rd ?? '–'} / ${formatSignedOrDash(t.avg, 2)}</span>
+                        </div>
+                    `;
+                }).join('');
+        }
+
+        function renderBotSingle2027Table() {
+            const tbody = document.querySelector('#table-bot-single-2027 tbody');
+            if (!tbody) return;
+            const botList = getBotDkcSingle2027();
+            if (botList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Noch keine BOT DKC Spieler in Einzelwertung 2027 vorhanden.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = botList.map(item => {
+                const ptsColor = item.pts > 0 ? 'text-emerald-400' : (item.pts < 0 ? 'text-red-400 font-bold' : 'text-slate-200');
+                const avgColor = item.avg > 0 ? 'text-emerald-300' : (item.avg < 0 ? 'text-red-400 font-bold' : 'text-slate-200');
+                return `
+                    <tr class="hover:bg-emerald-950/25 transition-colors">
+                        <td class="py-3 px-3 text-center font-bold text-emerald-400">${item.clubRank}.</td>
+                        <td class="py-3 px-3 text-center text-slate-400">${item.rank}.</td>
+                        <td class="py-3 px-4 font-semibold text-white">${item.name}</td>
+                        <td class="py-3 px-4 text-slate-300 text-xs">${item.team || item.club}</td>
+                        <td class="py-3 px-3 text-center font-bold ${ptsColor} bg-emerald-950/20 text-sm">${item.pts > 0 ? '+' + item.pts : item.pts}</td>
+                        <td class="py-3 px-3 text-center text-slate-300">${item.rd}</td>
+                        <td class="py-3 px-3 text-center font-bold ${avgColor}">${item.avg > 0 ? '+' + Number(item.avg).toFixed(2) : Number(item.avg).toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderScheduleView() {
+            const filterVal = document.getElementById('schedule-filter')?.value || 'all';
+            const container = document.getElementById('schedule-container');
+            if (!container) return;
+
+            const filtered = filterVal === 'all' ? matchdays : matchdays.filter(m => String(m.id) === filterVal);
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="bg-[#0c1424] border border-slate-800 rounded-2xl p-8 text-center text-slate-500 text-sm">Keine Spieltage vorhanden.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(md => {
+                const mdIndex = matchdays.findIndex(m => m.id === md.id);
+                const pairNum = Math.floor(mdIndex / 2) + 1;
+                const responses = md.responses || {};
+                const yesPlayers = Object.entries(responses).filter(([, st]) => st === 'yes').map(([n]) => n);
+                const noPlayers = Object.entries(responses).filter(([, st]) => st === 'no').map(([n]) => n);
+                const myStatus = activePlayerName ? responses[activePlayerName] : null;
+
+                let groupsHtml = '';
+                for (let gNum = 1; gNum <= 4; gNum++) {
+                    const teams = [...((md.groups && md.groups[gNum]) || [])]
+                        .filter(t => (t.team || '').trim() !== '')
+                        .sort((a, b) => (b.sp ?? -99999) - (a.sp ?? -99999));
+
+                    const rows = teams.length === 0
+                        ? `<div class="text-xs text-slate-500 py-3 text-center">Keine Mannschaften</div>`
+                        : teams.map((item, idx) => {
+                            const isOur = item.team.toUpperCase().includes(OUR_TEAM_NAME);
+                            const spDisp = item.sp !== null && item.sp !== undefined ? (item.sp > 0 ? '+' + item.sp : item.sp) : 'offen';
+                            const spCol = item.sp !== null && item.sp !== undefined ? (item.sp >= 0 ? 'text-emerald-400' : 'text-red-400') : 'text-slate-500 italic';
+                            return `
+                                <div class="flex items-center justify-between text-xs p-2.5 rounded-lg ${isOur ? 'bg-emerald-950/60 border border-emerald-400/60 text-emerald-300 font-bold' : 'bg-slate-900/90 text-slate-200 border border-slate-800/70'}">
+                                    <div class="flex items-center gap-2 truncate pr-2">
+                                        <span class="w-4 text-center font-bold ${isOur ? 'text-emerald-400' : 'text-slate-400'}">${idx + 1}.</span>
+                                        <span class="truncate">${item.team} ${item.host ? '🏠' : ''}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="px-2 py-0.5 rounded text-[11px] ${getWpBadgeClass(item.wp || 0)}">${item.wp || 0} WP</span>
+                                        <span class="w-12 text-right font-semibold ${spCol}">${spDisp}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+
+                    groupsHtml += `
+                        <div class="bg-[#080e1a] rounded-xl p-4 border border-slate-800/90">
+                            <div class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-3 pb-2 border-b border-slate-800 flex items-center justify-between">
+                                <span>Gruppe ${gNum}</span>
+                                <span class="text-[10px] text-slate-500 font-normal">WP / SP</span>
+                            </div>
+                            <div class="space-y-2">${rows}</div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="bg-[#0c1424] rounded-2xl border border-emerald-500/25 overflow-hidden shadow-lg">
+                        <div class="bg-gradient-to-r from-[#0e1a2e] to-[#0c1424] px-6 py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="font-bold text-white text-base sm:text-lg flex items-center gap-2">
+                                        <i class="fa-solid fa-calendar text-emerald-400"></i> ${md.title}
+                                    </h3>
+                                    <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-semibold">${pairNum}. Doppelspieltag</span>
+                                </div>
+                                <span class="text-xs text-slate-400"><i class="fa-regular fa-clock mr-1 text-emerald-400/70"></i> ${md.date || 'Termin offen'}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="setMatchdayAttendance(${md.id}, 'yes')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                                    myStatus === 'yes'
+                                        ? 'bg-emerald-400 text-slate-950 shadow-md shadow-emerald-400/35'
+                                        : 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50'
+                                }">
+                                    <i class="fa-solid fa-check"></i> Zusage
+                                </button>
+                                <button onclick="setMatchdayAttendance(${md.id}, 'no')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                                    myStatus === 'no'
+                                        ? 'bg-red-500 text-white shadow-md shadow-red-500/30'
+                                        : 'bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-700/60'
+                                }">
+                                    <i class="fa-solid fa-xmark"></i> Absage
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="px-6 py-4 bg-[#080e1a] border-b border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2">
+                                    <i class="fa-solid fa-circle-check mr-1"></i> Zusagen (${yesPlayers.length})
+                                </div>
+                                <div class="flex flex-wrap gap-1.5">
+                                    ${yesPlayers.length > 0
+                                        ? yesPlayers.map(p => `<span class="px-2.5 py-1 rounded-lg bg-emerald-950/90 border border-emerald-500/40 text-emerald-200 text-xs font-medium">${p}</span>`).join('')
+                                        : `<span class="text-xs text-slate-500">Noch keine Zusagen</span>`}
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] font-bold uppercase tracking-wider text-red-400 mb-2">
+                                    <i class="fa-solid fa-circle-xmark mr-1"></i> Absagen (${noPlayers.length})
+                                </div>
+                                <div class="flex flex-wrap gap-1.5">
+                                    ${noPlayers.length > 0
+                                        ? noPlayers.map(p => `<span class="px-2.5 py-1 rounded-lg bg-red-950/80 border border-red-600/40 text-red-200 text-xs font-medium">${p}</span>`).join('')
+                                        : `<span class="text-xs text-slate-500">Keine Absagen</span>`}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">${groupsHtml}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function calculateStandings() {
+            const statsMap = {};
+            matchdays.forEach(md => {
+                for (let gNum = 1; gNum <= 4; gNum++) {
+                    const list = (md.groups && md.groups[gNum]) || [];
+                    list.forEach(entry => {
+                        const name = (entry.team || '').trim();
+                        if (!name) return;
+                        if (!statsMap[name]) {
+                            statsMap[name] = { name, totalWertP: 0, totalSpielP: 0, entries: [] };
+                        }
+                        const wp = typeof entry.wp === 'number' && !Number.isNaN(entry.wp) ? entry.wp : 0;
+                        const sp = typeof entry.sp === 'number' && !Number.isNaN(entry.sp) ? entry.sp : null;
+                        statsMap[name].totalWertP += wp;
+                        if (sp !== null) statsMap[name].totalSpielP += sp;
+                        statsMap[name].entries.push({ matchdayTitle: md.title, wp, sp });
+                    });
+                }
+            });
+
+            return Object.values(statsMap).sort((a, b) => {
+                if (b.totalWertP !== a.totalWertP) return b.totalWertP - a.totalWertP;
+                return b.totalSpielP - a.totalSpielP;
+            });
+        }
+
+        function getWpBadgeClass(wp) {
+            if (wp >= 4) return 'bg-emerald-400 text-slate-950 font-extrabold';
+            if (wp === 3) return 'bg-lime-400 text-slate-950 font-bold';
+            if (wp === 2) return 'bg-amber-400 text-slate-950 font-bold';
+            if (wp === 1) return 'bg-red-500 text-white font-bold';
+            return 'bg-slate-800 text-slate-400 font-bold';
+        }
+
+        function getMatchdayChipClass(wp, sp) {
+            if (wp >= 4) return 'bg-emerald-950/80 border-emerald-400/60 text-emerald-200';
+            if (wp === 3) return 'bg-lime-950/70 border-lime-400/50 text-lime-200';
+            if (wp === 2) return 'bg-amber-950/65 border-amber-400/50 text-amber-200';
+            if (wp === 1 || (typeof sp === 'number' && sp < 0)) return 'bg-red-950/70 border-red-500/50 text-red-200';
+            return 'bg-slate-900 border-slate-700/80 text-slate-300';
+        }
+
+        function renderTable() {
+            const standings = calculateStandings();
+            const tbody = document.getElementById('table-body');
+            if (!tbody) return;
+
+            if (standings.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500">Noch keine Mannschaften eingetragen. Im Admin-Bereich Spieltage und Mannschaften anlegen.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = standings.map((team, idx) => {
+                const rank = idx + 1;
+                const isOur = team.name.toUpperCase().includes(OUR_TEAM_NAME);
+                const spColor = team.totalSpielP > 0 ? 'text-emerald-400' : (team.totalSpielP < 0 ? 'text-red-400 font-bold' : 'text-slate-200');
+                const chips = team.entries.map(e => {
+                    const spTxt = e.sp !== null ? (e.sp > 0 ? '+' + e.sp : e.sp) : '–';
+                    const spNumColor = e.sp !== null ? (e.sp > 0 ? 'text-emerald-300' : (e.sp < 0 ? 'text-red-300 font-bold' : 'text-slate-300')) : 'text-slate-400';
+                    const chipCls = getMatchdayChipClass(e.wp, e.sp);
+                    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] ${chipCls}">${e.matchdayTitle}: <strong>${e.wp}W</strong> / <span class="${spNumColor}">${spTxt}S</span></span>`;
+                }).join(' ');
+
+                return `
+                    <tr class="${isOur ? 'bg-emerald-950/45' : 'hover:bg-slate-900/70'} transition-colors">
+                        <td class="py-3 px-3 text-center"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-extrabold ${isOur ? 'bg-emerald-400 text-slate-950' : (rank === 1 ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-300')}">${rank}</span></td>
+                        <td class="py-3 px-4 font-semibold ${isOur ? 'text-emerald-300 font-extrabold' : 'text-white'}">${team.name} ${rank === 1 ? '👑' : ''}</td>
+                        <td class="py-3 px-3 text-center font-extrabold text-emerald-400 bg-emerald-950/30 text-sm">${team.totalWertP}</td>
+                        <td class="py-3 px-3 text-center font-bold ${spColor} bg-slate-900/50 text-sm">${team.totalSpielP > 0 ? '+' + team.totalSpielP : team.totalSpielP}</td>
+                        <td class="py-3 px-4 border-l border-slate-800"><div class="flex flex-wrap gap-1.5">${chips}</div></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getCurrentMatchday() {
+            return matchdays.find(m => m.id === currentAdminMatchdayId) || matchdays[0];
+        }
+
+        function getPartnerMatchday(mdId) {
+            const idx = matchdays.findIndex(m => m.id === mdId);
+            if (idx === -1) return null;
+            const partnerIdx = idx % 2 === 0 ? idx + 1 : idx - 1;
+            return matchdays[partnerIdx] || null;
+        }
+
+        async function copyGroupsFromPartnerMatchday() {
+            const current = getCurrentMatchday();
+            if (!current) return;
+            const partner = getPartnerMatchday(current.id);
+            if (!partner) return;
+
+            for (let gNum = 1; gNum <= 4; gNum++) {
+                current.groups[gNum] = (partner.groups[gNum] || []).map(item => ({
+                    team: item.team || '',
+                    sp: null,
+                    wp: 0,
+                    host: !!item.host
+                }));
+            }
+            renderAllViews();
+            await syncMatchdaysToSupabase();
+            showNotification(`Gruppen von "${partner.title}" nach "${current.title}" übernommen!`, 'success');
+        }
+
+        async function addNewMatchday() {
+            const nextId = matchdays.length > 0 ? Math.max(...matchdays.map(m => m.id)) + 1 : 1;
+            const isSecondOfPair = matchdays.length % 2 === 1;
+            const prevMd = isSecondOfPair ? matchdays[matchdays.length - 1] : null;
+            const newMd = createEmptyMatchday(nextId, `${nextId}. Spieltag`, '', prevMd ? prevMd.groups : null);
+            matchdays.push(newMd);
+            currentAdminMatchdayId = newMd.id;
+            renderMatchdayFilter();
+            renderAllViews();
+            await syncMatchdaysToSupabase();
+            showNotification(prevMd ? `${newMd.title} angelegt (Gruppen von ${prevMd.title} übernommen).` : `${newMd.title} angelegt.`, 'success');
+        }
+
+        async function deleteCurrentMatchday() {
+            if (matchdays.length <= 1) {
+                showNotification('Mindestens ein Spieltag muss erhalten bleiben.', 'error');
+                return;
+            }
+            const md = getCurrentMatchday();
+            matchdays = matchdays.filter(m => m.id !== md.id);
+            currentAdminMatchdayId = matchdays[0].id;
+            renderMatchdayFilter();
+            renderAllViews();
+            await deleteMatchdayFromSupabase(md.id);
+            saveLocalCache();
+            showNotification(`${md.title} gelöscht.`, 'success');
+        }
+
+        function selectAdminMatchday(id) {
+            currentAdminMatchdayId = id;
+            renderAdminView();
+        }
+
+        function updateCurrentMatchdayMeta() {
+            const md = getCurrentMatchday();
+            if (!md) return;
+            const titleEl = document.getElementById('admin-md-title');
+            const dateEl = document.getElementById('admin-md-date');
+            if (titleEl) md.title = titleEl.value;
+            if (dateEl) md.date = dateEl.value;
+            saveLocalCache();
+            renderMatchdayFilter();
+        }
+
+        function addTeamSlot(groupNum) {
+            const md = getCurrentMatchday();
+            if (!md) return;
+            if (!md.groups[groupNum]) md.groups[groupNum] = [];
+            md.groups[groupNum].push({ team: '', sp: null, wp: 0, host: false });
+            renderAdminView();
+        }
+
+        function removeTeamSlot(groupNum, idx) {
+            const md = getCurrentMatchday();
+            if (!md || !md.groups[groupNum]) return;
+            md.groups[groupNum].splice(idx, 1);
+            renderAdminView();
+        }
+
+        async function saveMatchdaysAndResults() {
+            const md = getCurrentMatchday();
+            if (!md) return;
+
+            const titleEl = document.getElementById('admin-md-title');
+            const dateEl = document.getElementById('admin-md-date');
+            if (titleEl) md.title = titleEl.value.trim() || `${md.id}. Spieltag`;
+            if (dateEl) md.date = dateEl.value.trim();
+
+            for (let gNum = 1; gNum <= 4; gNum++) {
+                const rows = document.querySelectorAll(`.admin-group-row[data-group="${gNum}"]`);
+                const updatedList = [];
+                rows.forEach(row => {
+                    const teamInput = row.querySelector('.admin-team-input');
+                    const wpInput = row.querySelector('.admin-wp-input');
+                    const spInput = row.querySelector('.admin-sp-input');
+                    const hostCheck = row.querySelector('.admin-host-checkbox');
+
+                    const teamName = (teamInput?.value || '').trim();
+                    const spVal = spInput && spInput.value.trim() !== '' ? parseFloat(spInput.value.replace(',', '.')) : null;
+                    const wpVal = wpInput && wpInput.value.trim() !== '' ? parseInt(wpInput.value, 10) : 0;
+                    const isHost = hostCheck ? !!hostCheck.checked : false;
+
+                    if (teamName || spVal !== null || wpVal !== 0 || isHost) {
+                        updatedList.push({
+                            team: teamName,
+                            sp: Number.isNaN(spVal) ? null : spVal,
+                            wp: Number.isNaN(wpVal) ? 0 : wpVal,
+                            host: isHost
+                        });
+                    }
+                });
+                md.groups[gNum] = updatedList;
+            }
+
+            const partner = getPartnerMatchday(md.id);
+            if (partner) {
+                const partnerHasTeams = [1, 2, 3, 4].some(g => (partner.groups[g] || []).some(t => (t.team || '').trim() !== ''));
+                if (!partnerHasTeams) {
+                    for (let gNum = 1; gNum <= 4; gNum++) {
+                        partner.groups[gNum] = md.groups[gNum].map(item => ({
+                            team: item.team || '',
+                            sp: null,
+                            wp: 0,
+                            host: !!item.host
+                        }));
+                    }
+                }
+            }
+
+            renderMatchdayFilter();
+            renderAllViews();
+            await syncMatchdaysToSupabase();
+            showNotification(`${md.title} in Supabase gespeichert!`, 'success');
+        }
+
+        function renderMatchdayFilter() {
+            const sel = document.getElementById('schedule-filter');
+            if (!sel) return;
+            const prev = sel.value || 'all';
+            sel.innerHTML = `<option value="all">Alle Spieltage anzeigen</option>` +
+                matchdays.map(md => `<option value="${md.id}">${md.title}${md.date ? ' (' + md.date + ')' : ''}</option>`).join('');
+            sel.value = Array.from(sel.options).some(o => o.value === prev) ? prev : 'all';
+        }
+
+        function renderAdminView() {
+            const btnContainer = document.getElementById('admin-matchday-buttons');
+            if (!btnContainer) return;
+
+            btnContainer.innerHTML = matchdays.map((md, idx) => {
+                const active = md.id === currentAdminMatchdayId;
+                const pairNum = Math.floor(idx / 2) + 1;
+                return `
+                    <button onclick="selectAdminMatchday(${md.id})" class="py-2 px-3.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        active
+                            ? 'bg-emerald-500 text-slate-950 glow-green-btn'
+                            : 'bg-[#080e1a] text-slate-400 hover:bg-slate-900 hover:text-emerald-300 border border-slate-800'
+                    }">
+                        <i class="fa-solid fa-calendar-day text-[10px]"></i>
+                        <span>${md.title}</span>
+                        <span class="text-[10px] opacity-80">(${pairNum}. DST)</span>
+                    </button>
+                `;
+            }).join('');
+
+            const md = getCurrentMatchday();
+            if (!md) return;
+
+            const titleEl = document.getElementById('admin-md-title');
+            const dateEl = document.getElementById('admin-md-date');
+            if (titleEl) titleEl.value = md.title || '';
+            if (dateEl) dateEl.value = md.date || '';
+
+            const partner = getPartnerMatchday(md.id);
+            const copyBtn = document.getElementById('copy-partner-groups-btn');
+            const copyLabel = document.getElementById('copy-partner-groups-label');
+            if (copyBtn && copyLabel) {
+                if (partner) {
+                    copyBtn.classList.remove('hidden');
+                    copyLabel.textContent = `Gruppen von ${partner.title} kopieren`;
+                } else {
+                    copyBtn.classList.add('hidden');
+                }
+            }
+
+            const groupsContainer = document.getElementById('admin-groups-container');
+            if (!groupsContainer) return;
+            groupsContainer.innerHTML = '';
+
+            for (let gNum = 1; gNum <= 4; gNum++) {
+                const list = md.groups[gNum] || [];
+                const rowsHtml = list.length === 0
+                    ? `<div class="text-xs text-slate-500 py-3 text-center bg-[#080e1a] rounded-xl border border-dashed border-slate-800">Keine Mannschaften in Gruppe ${gNum}.</div>`
+                    : list.map((item, idx) => `
+                        <div class="admin-group-row flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#080e1a] p-2.5 rounded-xl border ${item.host ? 'border-emerald-400/50 bg-emerald-950/25' : 'border-slate-800/80'}" data-group="${gNum}">
+                            <div class="flex items-center gap-2 flex-grow min-w-0">
+                                <span class="w-5 h-5 rounded-full bg-slate-800 text-emerald-400 text-[11px] font-bold flex items-center justify-center shrink-0">${idx + 1}</span>
+                                <input type="text" value="${(item.team || '').replace(/"/g, '&quot;')}" placeholder="Mannschaftsname..." class="admin-team-input flex-grow min-w-0 bg-slate-900 border border-slate-700 text-slate-100 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-emerald-400">
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0 justify-end flex-wrap">
+                                <label class="flex items-center gap-1 text-[11px] cursor-pointer text-slate-300 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 hover:border-emerald-400">
+                                    <input type="checkbox" ${item.host ? 'checked' : ''} class="admin-host-checkbox accent-emerald-400 w-3.5 h-3.5">
+                                    <span>🏠</span>
+                                </label>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-[10px] text-slate-400">WP</span>
+                                    <input type="number" step="1" value="${item.wp ?? 0}" class="admin-wp-input w-14 bg-slate-900 border border-slate-700 text-slate-100 px-1.5 py-1 rounded-lg text-xs text-center focus:outline-none focus:border-emerald-400 font-bold">
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-[10px] text-slate-400">SP</span>
+                                    <input type="number" step="any" value="${item.sp !== null && item.sp !== undefined ? item.sp : ''}" placeholder="0" class="admin-sp-input w-20 bg-slate-900 border border-slate-700 text-slate-100 px-2 py-1 rounded-lg text-xs text-right focus:outline-none focus:border-emerald-400 font-bold">
+                                </div>
+                                <button onclick="removeTeamSlot(${gNum}, ${idx})" title="Zeile entfernen" class="p-1.5 text-slate-500 hover:text-red-400 rounded-lg transition">
+                                    <i class="fa-solid fa-xmark text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                groupsContainer.innerHTML += `
+                    <div class="bg-[#080e1a]/70 p-4 rounded-2xl border border-slate-800 space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                            <h4 class="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-layer-group text-emerald-400"></i> Gruppe ${gNum}
+                            </h4>
+                            <button onclick="addTeamSlot(${gNum})" class="px-2.5 py-1 bg-slate-900 hover:bg-emerald-950/60 text-emerald-300 text-[11px] font-semibold rounded-lg border border-emerald-500/30 transition">
+                                + Mannschaft
+                            </button>
+                        </div>
+                        <div class="space-y-2">${rowsHtml}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function onCsvTargetChange() {
+            const target = document.getElementById('csv-target-select')?.value || 'gesamtdatei';
+            csvParsed.target = target;
+            updateCsvApplyButtonLabel();
+            if (csvParsed.rawAllLines.length > 0) {
+                reprocessCsvWithTarget();
+            }
+        }
+
+        function updateCsvApplyButtonLabel() {
+            const target = document.getElementById('csv-target-select')?.value || csvParsed.target || 'gesamtdatei';
+            const labels = {
+                'gesamtdatei': 'Kader & Historie überschreiben',
+                'kader': 'Kader BOT DKC überschreiben',
+                '2027': 'Einzel 2027 überschreiben',
+                '2026': 'Einzel 2026 überschreiben',
+                '2025': 'Einzel 2025 überschreiben',
+                'ehre-meister': 'Ehrentafel Meister überschreiben',
+                'ehre-einzel': 'Ehrentafel Einzel überschreiben',
+                'ewige': 'Ewige Bestenliste überschreiben'
+            };
+            const btn = document.getElementById('csv-apply-btn');
+            if (btn) btn.innerHTML = `<i class="fa-solid fa-check"></i> ${labels[target] || 'Übernehmen'}`;
+        }
+
+        function detectDelimiter(text) {
+            const sample = text.split(/\r?\n/).filter(l => l.trim() !== '').slice(0, 8).join('\n');
+            const semiCount = (sample.match(/;/g) || []).length;
+            const commaCount = (sample.match(/,/g) || []).length;
+            const tabCount = (sample.match(/\t/g) || []).length;
+            if (tabCount > semiCount && tabCount > commaCount) return '\t';
+            return semiCount >= commaCount ? ';' : ',';
+        }
+
+        function parseCsvLine(line, delimiter) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                const next = line[i + 1];
+                if (ch === '"') {
+                    if (inQuotes && next === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (ch === delimiter && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += ch;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function normalizeLabel(raw) {
+            return String(raw || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function cleanNamePart(raw) {
+            return String(raw || '').replace(/,/g, '').replace(/\s+/g, ' ').trim();
+        }
+
+        function formatLastFirstName(lastRaw, firstRaw) {
+            const ln = cleanNamePart(lastRaw);
+            const fn = cleanNamePart(firstRaw);
+            if (ln && fn) return `${ln}, ${fn}`;
+            return ln || fn;
+        }
+
+        function parseGermanNumber(val) {
+            if (val === undefined || val === null) return null;
+            let s = String(val).trim();
+            if (!s || s === '-' || s === '–' || s.toUpperCase().includes('#DIV/0!')) return null;
+            if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) {
+                s = s.replace(/\./g, '').replace(',', '.');
+            } else {
+                s = s.replace(',', '.');
+            }
+            const num = parseFloat(s);
+            return Number.isNaN(num) ? null : num;
+        }
+
+        function isGesamtdateiGrid(parsedLines) {
+            if (parsedLines.length < 3) return false;
+            const r0 = parsedLines[0] || [];
+            const r1 = parsedLines[1] || [];
+            const hasYears = r0.filter(c => /^(19|20)\d{2}|GESAMT/i.test(normalizeLabel(c))).length >= 3;
+            const hasSub = r1.filter(c => ['ergebnis', 'runden', 'schnitt'].includes(normalizeLabel(c).toLowerCase())).length >= 3;
+            return hasYears && hasSub;
+        }
+
+        function isEwigeMultiGrid(parsedLines) {
+            if (parsedLines.length < 3) return false;
+            const r0 = (parsedLines[0] || []).map(c => normalizeLabel(c).toUpperCase());
+            const r1 = (parsedLines[1] || []).map(c => normalizeLabel(c).toUpperCase());
+            const hasCompHeaders = r0.includes('GESAMT') && (r0.includes('RLT') || r0.includes('BUNDESLIGA'));
+            const hasPlayerCols = r1[0] === 'R' && r1[1] === 'NAME' && r1[2] === 'VORNAME';
+            return hasCompHeaders && hasPlayerCols;
+        }
+
+        function parseEwigeMultiGrid(parsedLines) {
+            const r0 = parsedLines[0] || [];
+            const r1 = parsedLines[1] || [];
+            const compDefs = [
+                { key: 'RLT', label: 'RLT', match: 'RLT' },
+                { key: 'DEM', label: 'D E M', match: 'D E M' },
+                { key: 'Regios', label: 'Regios', match: 'REGIOS' },
+                { key: 'DMM', label: 'D M M', match: 'D M M' },
+                { key: 'Bundesliga', label: 'Bundesliga', match: 'BUNDESLIGA' },
+                { key: 'BL-Quali', label: 'BL-Quali', match: 'BL-QUALI' },
+                { key: 'SonderT', label: 'SonderT', match: 'SONDERT' }
+            ];
+
+            const blocks = [];
+            compDefs.forEach((def, idx) => {
+                const startCol = r0.findIndex(c => normalizeLabel(c).toUpperCase() === def.match);
+                if (startCol !== -1) {
+                    let endCol = r1.length;
+                    for (let nextIdx = idx + 1; nextIdx < compDefs.length; nextIdx++) {
+                        const nextCol = r0.findIndex(c => normalizeLabel(c).toUpperCase() === compDefs[nextIdx].match);
+                        if (nextCol > startCol) {
+                            endCol = nextCol;
+                            break;
+                        }
+                    }
+                    blocks.push({ ...def, startCol, endCol });
+                }
+            });
+
+            const list = [];
+            for (let rIdx = 2; rIdx < parsedLines.length; rIdx++) {
+                const row = parsedLines[rIdx] || [];
+                const rankNum = parseInt(normalizeLabel(row[0] || ''), 10);
+                const lastName = cleanNamePart(row[1] || '');
+                const firstName = cleanNamePart(row[2] || '');
+                if (!lastName && !firstName) continue;
+
+                const name = formatLastFirstName(lastName, firstName);
+                const club = normalizeLabel(row[3] || '');
+                const pts = parseGermanNumber(row[4]) ?? 0;
+                const rd = Math.round(parseGermanNumber(row[5]) ?? 0);
+                const titles = Math.round(parseGermanNumber(row[6]) ?? 0);
+                const avg = rd > 0 ? +(pts / rd).toFixed(2) : 0;
+
+                const competitions = {};
+                blocks.forEach(b => {
+                    const compData = {};
+                    let hasAny = false;
+                    for (let c = b.startCol; c < b.endCol; c++) {
+                        let subHeader = normalizeLabel(r1[c] || '');
+                        if (!subHeader && b.key === 'SonderT' && c === b.startCol + 3) {
+                            subHeader = 'S';
+                        }
+                        if (!subHeader) continue;
+                        const val = parseGermanNumber(row[c]);
+                        if (val !== null) {
+                            compData[subHeader] = subHeader === 'P' ? val : Math.round(val);
+                            hasAny = true;
+                        }
+                    }
+                    if (hasAny) {
+                        competitions[b.key] = compData;
+                    }
+                });
+
+                list.push({
+                    rank: Number.isNaN(rankNum) ? list.length + 1 : rankNum,
+                    name,
+                    club,
+                    pts,
+                    rd,
+                    avg,
+                    titles,
+                    competitions
+                });
+            }
+
+            return list;
+        }
+
+        function parseGesamtdatei(parsedLines) {
+            const seasonRow = parsedLines[0] || [];
+            const blocks = [];
+            for (let col = 1; col + 2 < seasonRow.length; col += 3) {
+                const sLabel = normalizeLabel(seasonRow[col]);
+                if (sLabel) {
+                    blocks.push({ label: sLabel, col });
+                }
+            }
+
+            const players = [];
+            let teamHistory = [];
+
+            for (let rIdx = 2; rIdx < parsedLines.length; rIdx++) {
+                const row = parsedLines[rIdx] || [];
+                const firstCol = normalizeLabel(row[0] || '');
+                if (!firstCol) continue;
+
+                if (firstCol.toLowerCase() === 'gesamt') {
+                    teamHistory = blocks
+                        .filter(b => b.label.toUpperCase() !== 'GESAMT')
+                        .map(b => {
+                            const pts = parseGermanNumber(row[b.col]);
+                            const rdRaw = parseGermanNumber(row[b.col + 1]);
+                            const avg = parseGermanNumber(row[b.col + 2]);
+                            return {
+                                season: b.label,
+                                pts,
+                                rd: rdRaw !== null ? Math.round(rdRaw) : null,
+                                avg,
+                                placement: ''
+                            };
+                        });
+                } else if (firstCol.toLowerCase().startsWith('platzierung')) {
+                    const nonGesBlocks = blocks.filter(b => b.label.toUpperCase() !== 'GESAMT');
+                    nonGesBlocks.forEach((b, idx) => {
+                        const plVal = normalizeLabel(row[b.col] || '');
+                        if (teamHistory[idx]) {
+                            teamHistory[idx].placement = plVal;
+                        }
+                    });
+                } else {
+                    const seasons = {};
+                    let totalPts = null;
+                    let totalRd = null;
+                    let totalAvg = null;
+
+                    blocks.forEach(b => {
+                        const pts = parseGermanNumber(row[b.col]);
+                        const rdRaw = parseGermanNumber(row[b.col + 1]);
+                        const rd = rdRaw !== null ? Math.round(rdRaw) : null;
+                        const avg = parseGermanNumber(row[b.col + 2]);
+
+                        if (b.label.toUpperCase() === 'GESAMT') {
+                            totalPts = pts ?? 0;
+                            totalRd = rd ?? 0;
+                            totalAvg = avg;
+                        } else if (pts !== null || rd !== null || avg !== null) {
+                            seasons[b.label] = { pts, rd, avg };
+                        }
+                    });
+
+                    const s27 = seasons['2027'];
+                    const pts2027 = s27 && s27.pts !== null ? s27.pts : 0;
+                    const rd2027 = s27 && s27.rd !== null ? s27.rd : 0;
+                    const avg2027 = s27 && s27.avg !== null ? s27.avg : 0;
+
+                    players.push({
+                        name: firstCol,
+                        info: `${Object.keys(seasons).length} Saisons`,
+                        seasons,
+                        pts2027,
+                        rd2027,
+                        avg2027,
+                        totalPts,
+                        totalRd,
+                        totalAvg
+                    });
+                }
+            }
+
+            return { players, teamHistory, blockCount: blocks.length };
+        }
+
+        function handleCsvFileSelect(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let text = e.target.result || '';
+                if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+                const rawLines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+                if (rawLines.length < 2) {
+                    showNotification('CSV-Datei enthält zu wenige Zeilen.', 'error');
+                    return;
+                }
+
+                const delimiter = detectDelimiter(text);
+                const parsedLines = rawLines.map(l => parseCsvLine(l, delimiter));
+                csvParsed.rawAllLines = parsedLines;
+                csvParsed.delimiter = delimiter;
+
+                const targetSelect = document.getElementById('csv-target-select');
+                const lowerName = file.name.toLowerCase();
+                if (isGesamtdateiGrid(parsedLines) || lowerName.includes('gesamt')) {
+                    if (targetSelect) targetSelect.value = 'gesamtdatei';
+                } else if (isEwigeMultiGrid(parsedLines) || lowerName.includes('ewig')) {
+                    if (targetSelect) targetSelect.value = 'ewige';
+                } else if (targetSelect) {
+                    if (lowerName.includes('kader') || lowerName.includes('bot')) targetSelect.value = 'kader';
+                    else if (lowerName.includes('2027')) targetSelect.value = '2027';
+                    else if (lowerName.includes('2026')) targetSelect.value = '2026';
+                    else if (lowerName.includes('2025')) targetSelect.value = '2025';
+                    else if (lowerName.includes('meister')) targetSelect.value = 'ehre-meister';
+                }
+
+                csvParsed.target = targetSelect?.value || 'gesamtdatei';
+                updateCsvApplyButtonLabel();
+                reprocessCsvWithTarget();
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function reprocessCsvWithTarget() {
+            const parsedLines = csvParsed.rawAllLines;
+            if (!parsedLines || parsedLines.length === 0) return;
+
+            if (csvParsed.target === 'gesamtdatei') {
+                const res = parseGesamtdatei(parsedLines);
+                csvParsed.headers = ['Spieler', 'Historie-Saisons', '2027 Pkt.', '2027 Rd.', 'GESAMT'];
+                csvParsed.rows = [];
+                csvParsed.gesamtResult = res;
+                csvParsed.ewigeMultiResult = null;
+                renderGesamtdateiPreview(res);
+                return;
+            }
+
+            if (csvParsed.target === 'ewige' && isEwigeMultiGrid(parsedLines)) {
+                const ewList = parseEwigeMultiGrid(parsedLines);
+                csvParsed.ewigeMultiResult = ewList;
+                renderEwigeMultiPreview(ewList);
+                return;
+            }
+
+            csvParsed.ewigeMultiResult = null;
+            const headerRowIndex = findHeaderRowIndex(parsedLines, csvParsed.target);
+            const maxCols = Math.max(...parsedLines.slice(headerRowIndex).map(r => r.length));
+            const rawHeaders = parsedLines[headerRowIndex] || [];
+            const headers = Array.from({ length: maxCols }, (_, i) => normalizeLabel(rawHeaders[i] || '') || `Spalte ${i + 1}`);
+            const rows = parsedLines.slice(headerRowIndex + 1)
+                .map(cols => Array.from({ length: maxCols }, (_, i) => (cols[i] || '').trim()))
+                .filter(cols => cols.some(c => c !== ''));
+
+            csvParsed.headerRowIndex = headerRowIndex;
+            csvParsed.headers = headers;
+            csvParsed.rows = rows;
+            autoDetectCsvMapping();
+            renderCsvMappingPanel();
+            renderCsvPreview();
+        }
+
+        function renderEwigeMultiPreview(ewList) {
+            const mappingPanel = document.getElementById('csv-mapping-panel');
+            const previewPanel = document.getElementById('csv-preview-panel');
+            const summaryEl = document.getElementById('csv-preview-summary');
+            const thead = document.querySelector('#csv-preview-table thead');
+            const tbody = document.querySelector('#csv-preview-table tbody');
+
+            mappingPanel?.classList.add('hidden');
+            previewPanel?.classList.remove('hidden');
+
+            const botCount = ewList.filter(r => r.club.toUpperCase().includes(OUR_TEAM_NAME)).length;
+            summaryEl.textContent = `${ewList.length.toLocaleString('de-DE')} Spieler & alle 7 Wettbewerbe erkannt (davon ${botCount} BOT DKC Spieler) – wird in 500er-Paketen in Supabase gespeichert`;
+            summaryEl.className = 'text-xs font-semibold text-emerald-400';
+
+            thead.innerHTML = `<tr>
+                <th class="py-2 px-3">Rang</th>
+                <th class="py-2 px-3">Name, Vorname</th>
+                <th class="py-2 px-3">Verein</th>
+                <th class="py-2 px-3 text-right">Gesamt-P</th>
+                <th class="py-2 px-3 text-right">RD</th>
+                <th class="py-2 px-3 text-right">Ø</th>
+                <th class="py-2 px-3 text-center">Siege/Titel</th>
+            </tr>`;
+
+            tbody.innerHTML = ewList.slice(0, 15).map(r => `
+                <tr>
+                    <td class="py-1.5 px-3 text-slate-400">${r.rank}</td>
+                    <td class="py-1.5 px-3 font-semibold text-white">${r.name}</td>
+                    <td class="py-1.5 px-3 ${r.club.toUpperCase().includes(OUR_TEAM_NAME) ? 'text-emerald-400 font-bold' : 'text-slate-300'}">${r.club}</td>
+                    <td class="py-1.5 px-3 text-right font-bold text-emerald-400">${r.pts.toLocaleString('de-DE')}</td>
+                    <td class="py-1.5 px-3 text-right text-slate-300">${r.rd.toLocaleString('de-DE')}</td>
+                    <td class="py-1.5 px-3 text-right text-emerald-300">${Number(r.avg).toFixed(2)}</td>
+                    <td class="py-1.5 px-3 text-center text-amber-400 font-bold">${r.titles || '–'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderGesamtdateiPreview(res) {
+            const mappingPanel = document.getElementById('csv-mapping-panel');
+            const previewPanel = document.getElementById('csv-preview-panel');
+            const summaryEl = document.getElementById('csv-preview-summary');
+            const thead = document.querySelector('#csv-preview-table thead');
+            const tbody = document.querySelector('#csv-preview-table tbody');
+
+            mappingPanel?.classList.add('hidden');
+            previewPanel?.classList.remove('hidden');
+
+            summaryEl.textContent = `${res.players.length} BOT DKC Spieler & ${res.teamHistory.length} Saisons erkannt (überschreibt aktuellen Kader)`;
+            summaryEl.className = 'text-xs font-semibold text-emerald-400';
+
+            const sortedPreview = [...res.players].sort((a, b) => ((b.pts2027 ?? 0) - (a.pts2027 ?? 0)) || ((b.rd2027 ?? 0) - (a.rd2027 ?? 0)) || a.name.localeCompare(b.name, 'de'));
+
+            thead.innerHTML = `<tr>
+                <th class="py-2 px-3">Spieler</th>
+                <th class="py-2 px-3 text-center">Historie-Saisons</th>
+                <th class="py-2 px-3 text-right">2027 Pkt.</th>
+                <th class="py-2 px-3 text-right">2027 Rd.</th>
+                <th class="py-2 px-3 text-right">GESAMT (Historie)</th>
+            </tr>`;
+
+            tbody.innerHTML = sortedPreview.map(p => `
+                <tr>
+                    <td class="py-1.5 px-3 font-semibold text-white">${p.name}</td>
+                    <td class="py-1.5 px-3 text-center text-slate-400">${Object.keys(p.seasons).length}</td>
+                    <td class="py-1.5 px-3 text-right font-bold text-emerald-400">${formatSignedOrDash(p.pts2027)}</td>
+                    <td class="py-1.5 px-3 text-right text-slate-300">${p.rd2027 ?? 0}</td>
+                    <td class="py-1.5 px-3 text-right text-slate-400">${formatSignedOrDash(p.totalPts)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function findHeaderRowIndex(parsedLines, target) {
+            const keywordsByTarget = {
+                'ehre-meister': ['saison', 'meister', 'wp', 'spp', 'spieler'],
+                'kader': ['name', 'nachname', 'vorname', 'spieler', 'rolle', 'funktion', 'telefon', 'pass'],
+                'default': ['rang', 'name', 'vorname', 'verein', 'mannschaft', 'sp', 'rd', 'punkte', 'saison']
+            };
+            const keywords = keywordsByTarget[target] || keywordsByTarget.default;
+            for (let i = 0; i < Math.min(parsedLines.length, 8); i++) {
+                const cells = parsedLines[i].map(c => normalizeLabel(c).toLowerCase());
+                const hits = cells.filter(c => keywords.includes(c) || c === 'ø').length;
+                if (hits >= 2) return i;
+            }
+            return 0;
+        }
+
+        function autoDetectCsvMapping() {
+            const lower = csvParsed.headers.map(h => normalizeLabel(h).toLowerCase());
+            const findCol = (exactList, containsList) => {
+                for (const ex of exactList) {
+                    const idx = lower.findIndex(h => h === ex);
+                    if (idx !== -1) return idx;
+                }
+                for (const pat of containsList) {
+                    const idx = lower.findIndex(h => h.includes(pat));
+                    if (idx !== -1) return idx;
+                }
+                return -1;
+            };
+
+            if (csvParsed.target === 'kader') {
+                csvParsed.mapping = {
+                    lastname: findCol(['name', 'nachname', 'spieler'], ['name', 'nachname', 'spieler']),
+                    firstname: findCol(['vorname'], ['vorname']),
+                    info: findCol(['rolle', 'funktion', 'info', 'status', 'pass', 'telefon'], ['rolle', 'funktion', 'info', 'pass', 'tel', 'bemerkung'])
+                };
+            } else if (csvParsed.target === 'ehre-meister') {
+                const playerIdx = findCol(['spieler', 'meisterspieler'], ['spieler', 'kader']);
+                csvParsed.mapping = {
+                    season: findCol(['saison', 'jahr'], ['saison', 'jahr']),
+                    champion: findCol(['meister', 'mannschaft', 'verein'], ['meister', 'mannschaft', 'verein']),
+                    wp: findCol(['wp', 'wertp'], ['wp', 'wertp']),
+                    spp: findCol(['spp', 'spielp', 'sp'], ['spp', 'spielp']),
+                    playersStart: playerIdx >= 0 ? playerIdx : 4
+                };
+            } else if (csvParsed.target === 'ehre-einzel') {
+                csvParsed.mapping = {
+                    season: findCol(['saison', 'jahr'], ['saison', 'jahr']),
+                    lastname: findCol(['name', 'nachname', 'spieler'], ['name', 'nachname', 'spieler']),
+                    firstname: findCol(['vorname'], ['vorname']),
+                    club: findCol(['verein', 'mannschaft'], ['verein', 'mannschaft']),
+                    pts: findCol(['sp', 'punkte'], ['punkte', 'sp']),
+                    avg: findCol(['ø', 'schnitt'], ['schnitt', 'avg'])
+                };
+            } else {
+                csvParsed.mapping = {
+                    lastname: findCol(['name', 'nachname', 'spieler'], ['name', 'nachname', 'spieler']),
+                    firstname: findCol(['vorname'], ['vorname']),
+                    club: findCol(['verein'], ['verein', 'club']),
+                    team: findCol(['mannschaft'], ['mannschaft', 'team']),
+                    pts: findCol(['sp', 'punkte', 'gesamt'], ['punkte', 'pkt', 'sp']),
+                    rd: findCol(['rd', 'runden'], ['runden', 'rd', 'spiele']),
+                    avg: findCol(['ø', 'schnitt'], ['schnitt', 'avg'])
+                };
+            }
+        }
+
+        function renderCsvMappingPanel() {
+            const panel = document.getElementById('csv-mapping-panel');
+            const fieldsWrap = document.getElementById('csv-mapping-fields');
+            const metaInfo = document.getElementById('csv-meta-info');
+            if (!panel || !fieldsWrap) return;
+
+            panel.classList.remove('hidden');
+            const delimLabel = csvParsed.delimiter === '\t' ? 'Tab' : `"${csvParsed.delimiter}"`;
+            metaInfo.textContent = `${csvParsed.rows.length} Zeilen · Kopfzeile: Zeile ${csvParsed.headerRowIndex + 1} · Trennzeichen: ${delimLabel}`;
+
+            const fieldDefsByTarget = {
+                'kader': [
+                    { key: 'lastname', label: 'Name / Nachname *' },
+                    { key: 'firstname', label: 'Vorname' },
+                    { key: 'info', label: 'Info / Rolle / Pass' }
+                ],
+                'ehre-meister': [
+                    { key: 'season', label: 'Saison *' },
+                    { key: 'champion', label: 'Meister *' },
+                    { key: 'wp', label: 'WP' },
+                    { key: 'spp', label: 'SpP' },
+                    { key: 'playersStart', label: 'Spieler ab Spalte' }
+                ],
+                'ehre-einzel': [
+                    { key: 'season', label: 'Saison *' },
+                    { key: 'lastname', label: 'Name / Nachname *' },
+                    { key: 'firstname', label: 'Vorname' },
+                    { key: 'club', label: 'Verein / Team' },
+                    { key: 'pts', label: 'Punkte (SP)' },
+                    { key: 'avg', label: 'Schnitt (Ø)' }
+                ],
+                'default': [
+                    { key: 'lastname', label: 'Name (Nachname) *' },
+                    { key: 'firstname', label: 'Vorname' },
+                    { key: 'club', label: 'Verein' },
+                    { key: 'team', label: 'Mannschaft' },
+                    { key: 'pts', label: 'Punkte / SP *' },
+                    { key: 'rd', label: 'Runden / RD' },
+                    { key: 'avg', label: 'Schnitt / Ø' }
+                ]
+            };
+
+            const defs = fieldDefsByTarget[csvParsed.target] || fieldDefsByTarget.default;
+            const opts = `<option value="-1">-- nicht zuordnen --</option>` +
+                csvParsed.headers.map((h, i) => `<option value="${i}">${h}</option>`).join('');
+
+            fieldsWrap.innerHTML = defs.map(d => `
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">${d.label}</label>
+                    <select data-map-key="${d.key}" onchange="onCsvMappingChange(this)" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-emerald-400">
+                        ${opts}
+                    </select>
+                </div>
+            `).join('');
+
+            fieldsWrap.querySelectorAll('select').forEach(sel => {
+                const k = sel.getAttribute('data-map-key');
+                sel.value = String(csvParsed.mapping[k] ?? -1);
+            });
+        }
+
+        function onCsvMappingChange(sel) {
+            const key = sel.getAttribute('data-map-key');
+            csvParsed.mapping[key] = parseInt(sel.value, 10);
+            renderCsvPreview();
+        }
+
+        function combinePlayerName(cols, m) {
+            const lnRaw = m.lastname >= 0 ? (cols[m.lastname] || '').trim() : '';
+            const fnRaw = m.firstname >= 0 ? (cols[m.firstname] || '').trim() : '';
+
+            if (lnRaw && !fnRaw && lnRaw.includes(',')) {
+                const parts = lnRaw.split(',');
+                return formatLastFirstName(parts[0], parts.slice(1).join(' '));
+            }
+
+            return formatLastFirstName(lnRaw, fnRaw);
+        }
+
+        function buildMappedRows() {
+            if (csvParsed.target === 'ewige' && csvParsed.ewigeMultiResult) {
+                return csvParsed.ewigeMultiResult;
+            }
+
+            const m = csvParsed.mapping;
+            if (csvParsed.target === 'kader') {
+                return csvParsed.rows.map(cols => {
+                    const name = combinePlayerName(cols, m);
+                    if (!name) return null;
+                    const info = m.info >= 0 ? (cols[m.info] || '').trim() : '';
+                    return { name, info, seasons: {}, pts2027: 0, rd2027: 0, avg2027: 0, totalPts: null, totalRd: null, totalAvg: null };
+                }).filter(Boolean);
+            }
+
+            if (csvParsed.target === 'ehre-meister') {
+                const seasons = [];
+                let current = null;
+                csvParsed.rows.forEach(cols => {
+                    const seasonVal = m.season >= 0 ? normalizeLabel(cols[m.season] || '') : '';
+                    const championVal = m.champion >= 0 ? normalizeLabel(cols[m.champion] || '') : '';
+                    const wpNum = m.wp >= 0 ? parseGermanNumber(cols[m.wp]) : null;
+                    const sppNum = m.spp >= 0 ? parseGermanNumber(cols[m.spp]) : null;
+                    const startIdx = m.playersStart >= 0 ? m.playersStart : 4;
+                    const rowPlayers = cols.slice(startIdx).map(c => normalizeLabel(c)).filter(Boolean);
+
+                    if (seasonVal) {
+                        if (current) seasons.push(current);
+                        current = {
+                            season: seasonVal,
+                            champion: championVal || '–',
+                            wp: wpNum !== null ? Math.round(wpNum) : null,
+                            spp: sppNum !== null ? sppNum : null,
+                            players: [...rowPlayers]
+                        };
+                    } else if (current) {
+                        rowPlayers.forEach(pl => {
+                            if (!current.players.includes(pl)) current.players.push(pl);
+                        });
+                    }
+                });
+                if (current) seasons.push(current);
+                return seasons;
+            }
+
+            if (csvParsed.target === 'ehre-einzel') {
+                return csvParsed.rows.map(cols => {
+                    const season = m.season >= 0 ? normalizeLabel(cols[m.season] || '') : '';
+                    const name = combinePlayerName(cols, m);
+                    if (!season && !name) return null;
+                    const club = m.club >= 0 ? (cols[m.club] || '').trim() : '';
+                    const pts = m.pts >= 0 ? (parseGermanNumber(cols[m.pts]) ?? 0) : 0;
+                    const avg = m.avg >= 0 ? (parseGermanNumber(cols[m.avg]) ?? 0) : 0;
+                    return { season, name, club, pts, avg };
+                }).filter(Boolean);
+            }
+
+            const list = csvParsed.rows.map(cols => {
+                const name = combinePlayerName(cols, m);
+                if (!name) return null;
+                const club = m.club >= 0 ? (cols[m.club] || '').trim() : '';
+                const team = m.team >= 0 ? (cols[m.team] || '').trim() : '';
+                const pts = m.pts >= 0 ? (parseGermanNumber(cols[m.pts]) ?? 0) : 0;
+                const rd = m.rd >= 0 ? Math.round(parseGermanNumber(cols[m.rd]) ?? 0) : 0;
+                let avg = m.avg >= 0 ? parseGermanNumber(cols[m.avg]) : null;
+                avg = avg !== null ? +avg.toFixed(2) : (rd > 0 ? +(pts / rd).toFixed(2) : 0);
+                return { name, club, team, pts, rd, avg, titles: 0, competitions: {} };
+            }).filter(Boolean);
+
+            list.sort((a, b) => (b.pts - a.pts) || (b.rd - a.rd));
+            return list.map((item, idx) => ({ rank: idx + 1, ...item }));
+        }
+
+        function renderCsvPreview() {
+            const previewPanel = document.getElementById('csv-preview-panel');
+            const summaryEl = document.getElementById('csv-preview-summary');
+            const thead = document.querySelector('#csv-preview-table thead');
+            const tbody = document.querySelector('#csv-preview-table tbody');
+            if (!previewPanel || !thead || !tbody) return;
+
+            const mapped = buildMappedRows();
+            previewPanel.classList.remove('hidden');
+
+            if (mapped.length === 0) {
+                summaryEl.textContent = 'Keine gültigen Datensätze erkannt.';
+                summaryEl.className = 'text-xs font-semibold text-amber-400';
+                thead.innerHTML = '';
+                tbody.innerHTML = '';
+                return;
+            }
+
+            summaryEl.textContent = `${mapped.length} Einträge erkannt (überschreibt beim Übernehmen die aktuelle Liste)`;
+            summaryEl.className = 'text-xs font-semibold text-emerald-400';
+
+            if (csvParsed.target === 'kader') {
+                thead.innerHTML = `<tr><th class="py-2 px-3">#</th><th class="py-2 px-3">Spieler</th><th class="py-2 px-3">Info / Rolle</th></tr>`;
+                tbody.innerHTML = mapped.slice(0, 12).map((r, i) => `
+                    <tr><td class="py-1.5 px-3 text-slate-400">${i + 1}</td><td class="py-1.5 px-3 font-medium text-white">${r.name}</td><td class="py-1.5 px-3 text-slate-400">${r.info || '–'}</td></tr>
+                `).join('');
+                return;
+            }
+
+            if (csvParsed.target === 'ehre-meister') {
+                thead.innerHTML = `<tr><th class="py-2 px-3">Saison</th><th class="py-2 px-3">Meister</th><th class="py-2 px-3">WP</th><th class="py-2 px-3">SpP</th><th class="py-2 px-3">Spieler</th></tr>`;
+                tbody.innerHTML = mapped.slice(0, 10).map(s => `
+                    <tr><td class="py-1.5 px-3 font-bold text-amber-400">${s.season}</td><td class="py-1.5 px-3 text-white">${s.champion}</td><td class="py-1.5 px-3 text-emerald-400">${s.wp ?? '–'}</td><td class="py-1.5 px-3 text-slate-300">${s.spp ?? '–'}</td><td class="py-1.5 px-3 text-slate-400 text-[11px]">${s.players.join(', ')}</td></tr>
+                `).join('');
+                return;
+            }
+
+            if (csvParsed.target === 'ehre-einzel') {
+                thead.innerHTML = `<tr><th class="py-2 px-3">Saison</th><th class="py-2 px-3">Spieler</th><th class="py-2 px-3">Verein</th><th class="py-2 px-3 text-right">SP</th><th class="py-2 px-3 text-right">Ø</th></tr>`;
+                tbody.innerHTML = mapped.slice(0, 12).map(r => `
+                    <tr><td class="py-1.5 px-3 text-amber-400 font-bold">${r.season}</td><td class="py-1.5 px-3 text-white">${r.name}</td><td class="py-1.5 px-3 text-slate-300">${r.club}</td><td class="py-1.5 px-3 text-right text-emerald-400">${r.pts}</td><td class="py-1.5 px-3 text-right text-emerald-300">${Number(r.avg).toFixed(2)}</td></tr>
+                `).join('');
+                return;
+            }
+
+            thead.innerHTML = `<tr><th class="py-2 px-3">Rang</th><th class="py-2 px-3">Name, Vorname</th><th class="py-2 px-3">Verein</th><th class="py-2 px-3">Mannschaft</th><th class="py-2 px-3 text-right">SP</th><th class="py-2 px-3 text-right">RD</th><th class="py-2 px-3 text-right">Ø</th></tr>`;
+            tbody.innerHTML = mapped.slice(0, 12).map(r => `
+                <tr><td class="py-1.5 px-3 text-slate-400">${r.rank}</td><td class="py-1.5 px-3 text-white">${r.name}</td><td class="py-1.5 px-3 text-slate-300">${r.club}</td><td class="py-1.5 px-3 text-slate-400">${r.team}</td><td class="py-1.5 px-3 text-right text-emerald-400 font-bold">${r.pts}</td><td class="py-1.5 px-3 text-right text-slate-300">${r.rd}</td><td class="py-1.5 px-3 text-right text-emerald-300">${Number(r.avg).toFixed(2)}</td></tr>
+            `).join('');
+        }
+
+        async function applyCsvImport() {
+            const target = document.getElementById('csv-target-select')?.value || csvParsed.target;
+            const applyBtn = document.getElementById('csv-apply-btn');
+            if (applyBtn) {
+                applyBtn.disabled = true;
+                applyBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Speichere in Supabase...`;
+            }
+
+            try {
+                if (target === 'gesamtdatei') {
+                    const res = csvParsed.gesamtResult || parseGesamtdatei(csvParsed.rawAllLines);
+                    if (!res || res.players.length === 0) {
+                        showNotification('Keine Spieler in der Gesamtdatei erkannt.', 'error');
+                        return;
+                    }
+                    KADER_DATA = res.players;
+                    TEAM_HISTORY_DATA = res.teamHistory;
+                    syncPlayerDropdowns();
+                    syncKaderSeasonDropdown();
+                    renderAllViews();
+                    await replaceKaderInSupabase();
+                    showNotification(`${res.players.length} BOT DKC Spieler & Historie überschrieben und in Supabase gespeichert!`, 'success');
+                    switchTab('kader');
+                    return;
+                }
+
+                const mapped = buildMappedRows();
+                if (mapped.length === 0) {
+                    showNotification('Keine gültigen Daten zum Übernehmen vorhanden.', 'error');
+                    return;
+                }
+
+                if (target === 'kader') {
+                    KADER_DATA = mapped;
+                    syncPlayerDropdowns();
+                    syncKaderSeasonDropdown();
+                    renderAllViews();
+                    await replaceKaderInSupabase();
+                    showNotification(`Kader BOT DKC (${mapped.length} Spieler) überschrieben und in Supabase gespeichert!`, 'success');
+                    switchTab('kader');
+                } else if (target === 'ehre-meister') {
+                    EHRE_MEISTER_DATA = mapped;
+                    renderAllViews();
+                    await replaceEhreMeisterInSupabase(mapped);
+                    showNotification(`Ehrentafel Meister (${mapped.length} Saisons) überschrieben und in Supabase gespeichert!`, 'success');
+                    switchTab('ehre-meister');
+                } else if (target === 'ehre-einzel') {
+                    EHRE_EINZEL_DATA = mapped;
+                    renderAllViews();
+                    await replaceEhreEinzelInSupabase(mapped);
+                    showNotification(`Ehrentafel Einzel (${mapped.length} Einträge) überschrieben und in Supabase gespeichert!`, 'success');
+                    switchTab('ehre-einzel');
+                } else if (target === 'ewige') {
+                    EWIGE_DATA = mapped;
+                    ewigePage = 1;
+                    expandedEwigeRanks.clear();
+                    renderAllViews();
+                    await replaceEwigeInSupabase(mapped);
+                    showNotification(`Ewige Bestenliste (${mapped.length.toLocaleString('de-DE')} Spieler) überschrieben und in Supabase gespeichert!`, 'success');
+                    switchTab('ewige');
+                } else if (['2027', '2026', '2025'].includes(target)) {
+                    SINGLE_DATA[target] = mapped;
+                    renderAllViews();
+                    await replaceSingleSeasonInSupabase(target, mapped);
+                    showNotification(`Einzelwertung ${target} (${mapped.length} Spieler) überschrieben und in Supabase gespeichert!`, 'success');
+                    switchTab(target === '2027' ? 'bot-single-2027' : 'single-' + target);
+                }
+            } finally {
+                if (applyBtn) {
+                    applyBtn.disabled = false;
+                    updateCsvApplyButtonLabel();
+                }
+            }
+        }
+
+        function resetCsvImport() {
+            const target = document.getElementById('csv-target-select')?.value || 'gesamtdatei';
+            csvParsed = { target, delimiter: ';', headerRowIndex: 0, headers: [], rows: [], rawAllLines: [], mapping: {}, ewigeMultiResult: null };
+            const fileInput = document.getElementById('csv-file-input');
+            if (fileInput) fileInput.value = '';
+            document.getElementById('csv-mapping-panel')?.classList.add('hidden');
+            document.getElementById('csv-preview-panel')?.classList.add('hidden');
+            updateCsvApplyButtonLabel();
+        }
+
+        function populateSingleTable(year, data) {
+            const tbody = document.querySelector(`#table-single-${year} tbody`);
+            if (!tbody) return;
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Noch keine Daten importiert. Bitte im Admin-Bereich eine CSV-Datei für Einzel ${year} laden.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.map(item => {
+                const isBot = (item.club + ' ' + item.team).toUpperCase().includes(OUR_TEAM_NAME);
+                const rankBadge = item.rank === 1 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold' :
+                                  item.rank === 2 ? 'bg-slate-300/20 text-slate-300 border border-slate-400/30 font-bold' :
+                                  item.rank === 3 ? 'bg-amber-700/20 text-amber-600 border border-amber-700/30 font-bold' : 'bg-slate-800 text-slate-400';
+                const ptsColor = item.pts > 0 ? 'text-emerald-400' : (item.pts < 0 ? 'text-red-400 font-bold' : 'text-slate-200');
+                const avgColor = item.avg > 0 ? 'text-emerald-300' : (item.avg < 0 ? 'text-red-400 font-bold' : 'text-slate-200');
+
+                return `
+                    <tr class="${isBot ? 'bg-emerald-950/35' : 'hover:bg-slate-900/80'} transition-colors" data-search="${(item.name + ' ' + item.club + ' ' + item.team).toLowerCase()}">
+                        <td class="py-3 px-3 text-center"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${rankBadge}">${item.rank}</span></td>
+                        <td class="py-3 px-4 font-semibold text-white">${item.name}</td>
+                        <td class="py-3 px-4 ${isBot ? 'text-emerald-300 font-bold' : 'text-slate-300'}">${item.club}</td>
+                        <td class="py-3 px-4 text-slate-400 text-xs">${item.team}</td>
+                        <td class="py-3 px-3 text-center font-bold ${ptsColor} bg-emerald-950/20 text-sm">${item.pts > 0 ? '+' + item.pts : item.pts}</td>
+                        <td class="py-3 px-3 text-center text-slate-300">${item.rd}</td>
+                        <td class="py-3 px-3 text-center font-bold ${avgColor}">${item.avg > 0 ? '+' + Number(item.avg).toFixed(2) : Number(item.avg).toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterSingleTable(year) {
+            filterGenericTable(`table-single-${year}`, `search-${year}`);
+        }
+
+        function populateEhreMeisterTable() {
+            const tbody = document.querySelector('#table-ehre-meister tbody');
+            if (!tbody) return;
+            if (!EHRE_MEISTER_DATA || EHRE_MEISTER_DATA.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500">Noch keine CSV importiert. Bitte im Admin-Bereich eine CSV-Datei laden.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = EHRE_MEISTER_DATA.map((row, idx) => {
+                const playersText = row.players && row.players.length > 0 ? row.players.join(', ') : '–';
+                return `
+                    <tr class="hover:bg-slate-900/80 transition-colors" data-search="${(row.season + ' ' + row.champion + ' ' + playersText).toLowerCase()}">
+                        <td class="py-3 px-3 text-center font-bold ${idx === 0 ? 'text-amber-400' : 'text-slate-300'}">${row.season}</td>
+                        <td class="py-3 px-4 font-semibold text-white">${row.champion}</td>
+                        <td class="py-3 px-3 text-center font-bold text-emerald-400 bg-emerald-950/20">${row.wp ?? '–'}</td>
+                        <td class="py-3 px-3 text-center text-slate-300">${row.spp ?? '–'}</td>
+                        <td class="py-3 px-4 text-slate-300 text-xs">${playersText}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function populateEhreEinzelTable() {
+            const tbody = document.querySelector('#table-ehre-einzel tbody');
+            if (!tbody) return;
+            if (!EHRE_EINZEL_DATA || EHRE_EINZEL_DATA.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500">Noch keine CSV importiert. Bitte im Admin-Bereich eine CSV-Datei laden.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = EHRE_EINZEL_DATA.map(row => `
+                <tr class="hover:bg-slate-900/80 transition-colors" data-search="${(row.season + ' ' + row.name + ' ' + row.club).toLowerCase()}">
+                    <td class="py-3 px-3 text-center font-bold text-amber-400">${row.season}</td>
+                    <td class="py-3 px-4 font-semibold text-white">${row.name}</td>
+                    <td class="py-3 px-4 text-slate-300">${row.club}</td>
+                    <td class="py-3 px-3 text-center font-bold text-emerald-400 bg-emerald-950/20">${row.pts}</td>
+                    <td class="py-3 px-3 text-center font-bold text-emerald-300">${Number(row.avg).toFixed(2)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function setEwigeClubFilter(mode) {
+            ewigeClubFilter = mode;
+            ewigePage = 1;
+            const btnAll = document.getElementById('ewige-filter-all');
+            const btnBot = document.getElementById('ewige-filter-bot');
+            if (btnAll && btnBot) {
+                if (mode === 'all') {
+                    btnAll.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 transition';
+                    btnBot.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-emerald-300 transition';
+                } else {
+                    btnBot.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 transition';
+                    btnAll.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-emerald-300 transition';
+                }
+            }
+            populateEwigeTable();
+        }
+
+        function onEwigeSearchChange() {
+            ewigePage = 1;
+            populateEwigeTable();
+        }
+
+        function changeEwigePage(delta) {
+            ewigePage = Math.max(1, ewigePage + delta);
+            populateEwigeTable();
+        }
+
+        function toggleEwigeRowExpand(rankId) {
+            if (expandedEwigeRanks.has(rankId)) {
+                expandedEwigeRanks.delete(rankId);
+            } else {
+                expandedEwigeRanks.add(rankId);
+            }
+            populateEwigeTable();
+        }
+
+        function populateEwigeTable() {
+            const tbody = document.querySelector('#table-ewige tbody');
+            const pagBar = document.getElementById('ewige-pagination');
+            const pageInfo = document.getElementById('ewige-page-info');
+            const prevBtn = document.getElementById('ewige-prev-btn');
+            const nextBtn = document.getElementById('ewige-next-btn');
+            if (!tbody) return;
+
+            if (!EWIGE_DATA || EWIGE_DATA.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Noch keine CSV importiert. Bitte im Admin-Bereich die <code class="text-emerald-300">alle-ewig.csv</code> laden.</td></tr>`;
+                pagBar?.classList.add('hidden');
+                return;
+            }
+
+            const query = (document.getElementById('search-ewige')?.value || '').toLowerCase().trim();
+            const filtered = EWIGE_DATA.filter(item => {
+                const isBot = (item.club || '').toUpperCase().includes(OUR_TEAM_NAME);
+                if (ewigeClubFilter === 'bot' && !isBot) return false;
+                if (query) {
+                    const hay = `${item.rank} ${item.name} ${item.club}`.toLowerCase();
+                    if (!hay.includes(query)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Keine Spieler für diesen Filter gefunden.</td></tr>`;
+                pagBar?.classList.add('hidden');
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(filtered.length / EWIGE_PAGE_SIZE));
+            if (ewigePage > totalPages) ewigePage = totalPages;
+            const startIdx = (ewigePage - 1) * EWIGE_PAGE_SIZE;
+            const slice = filtered.slice(startIdx, startIdx + EWIGE_PAGE_SIZE);
+
+            if (pagBar && pageInfo && prevBtn && nextBtn) {
+                if (filtered.length > EWIGE_PAGE_SIZE) {
+                    pagBar.classList.remove('hidden');
+                    pageInfo.textContent = `Zeige ${startIdx + 1}–${Math.min(startIdx + EWIGE_PAGE_SIZE, filtered.length)} von ${filtered.length.toLocaleString('de-DE')} Spielern (Seite ${ewigePage} / ${totalPages})`;
+                    prevBtn.disabled = ewigePage <= 1;
+                    nextBtn.disabled = ewigePage >= totalPages;
+                } else {
+                    pagBar.classList.add('hidden');
+                }
+            }
+
+            const compOrder = [
+                { key: 'RLT', label: 'RLT' },
+                { key: 'DEM', label: 'D E M' },
+                { key: 'Regios', label: 'Regios' },
+                { key: 'DMM', label: 'D M M' },
+                { key: 'Bundesliga', label: 'Bundesliga' },
+                { key: 'BL-Quali', label: 'BL-Quali' },
+                { key: 'SonderT', label: 'SonderT' }
+            ];
+
+            tbody.innerHTML = slice.map(item => {
+                const isBot = (item.club || '').toUpperCase().includes(OUR_TEAM_NAME);
+                const cleanPlayerName = cleanNamePart(item.name);
+                const rowId = `${item.rank}_${cleanPlayerName}`;
+                const isExpanded = expandedEwigeRanks.has(rowId);
+                const comps = item.competitions || {};
+                const hasComps = Object.keys(comps).length > 0;
+                const ptsColor = item.pts > 0 ? 'text-emerald-400' : (item.pts < 0 ? 'text-red-400 font-bold' : 'text-slate-200');
+                const avgColor = item.avg > 0 ? 'text-emerald-300' : (item.avg < 0 ? 'text-red-400 font-bold' : 'text-slate-200');
+
+                const mainRow = `
+                    <tr onclick="toggleEwigeRowExpand('${escapeJsSingleQuote(rowId)}')" class="${isBot ? 'bg-emerald-950/35 hover:bg-emerald-950/55' : 'hover:bg-slate-900/80'} cursor-pointer transition-colors">
+                        <td class="py-3 px-3 text-center font-bold ${isBot ? 'text-emerald-400' : 'text-slate-300'}">${item.rank}.</td>
+                        <td class="py-3 px-4 font-semibold text-white">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid ${isExpanded ? 'fa-chevron-down text-emerald-400' : 'fa-chevron-right text-slate-500'} text-[11px]"></i>
+                                <span>${cleanPlayerName}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 ${isBot ? 'text-emerald-300 font-bold' : 'text-slate-300'}">${item.club || '–'}</td>
+                        <td class="py-3 px-3 text-center font-bold ${ptsColor} bg-emerald-950/20">${item.pts > 0 ? '+' + item.pts.toLocaleString('de-DE') : item.pts.toLocaleString('de-DE')}</td>
+                        <td class="py-3 px-3 text-center text-slate-300">${item.rd.toLocaleString('de-DE')}</td>
+                        <td class="py-3 px-3 text-center font-bold ${avgColor}">${item.avg > 0 ? '+' + Number(item.avg).toFixed(2) : Number(item.avg).toFixed(2)}</td>
+                        <td class="py-3 px-3 text-center font-bold text-amber-400">${item.titles > 0 ? item.titles : '–'}</td>
+                    </tr>
+                `;
+
+                if (!isExpanded) return mainRow;
+
+                const cardsHtml = !hasComps
+                    ? `<div class="text-xs text-slate-400">Keine Einzel-Wettbewerbsdaten hinterlegt.</div>`
+                    : compOrder.map(c => {
+                        const d = comps[c.key];
+                        if (!d) {
+                            return `
+                                <div class="bg-[#0b1322]/60 border border-slate-800/80 rounded-lg px-3 py-2 text-xs opacity-60">
+                                    <div class="font-bold text-slate-400 text-[11px] mb-1">${c.label}</div>
+                                    <div class="text-[11px] text-slate-500">Keine Teilnahme</div>
+                                </div>
+                            `;
+                        }
+                        const cPts = d.P ?? 0;
+                        const cRd = d.RD ?? 0;
+                        const cAvg = cRd > 0 ? (cPts / cRd).toFixed(2) : '0.00';
+                        const einzelSiege = d.S ?? 0;
+                        const rawTitel = d.Titel ?? 0;
+                        const displayTitel = c.key === 'DEM' ? Math.max(rawTitel, einzelSiege) : rawTitel;
+
+                        return `
+                            <div class="bg-[#0b1322] border border-emerald-500/25 rounded-lg px-3 py-2 text-xs">
+                                <div class="font-bold text-emerald-400 text-[11px] mb-1 flex items-center justify-between gap-1">
+                                    <span>${c.label}</span>
+                                    ${displayTitel > 0 ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40">${displayTitel} Titel</span>` : ''}
+                                </div>
+                                <div class="space-y-0.5 text-[11px]">
+                                    <div class="flex justify-between gap-2"><span class="text-slate-400">Punkte:</span><span class="font-bold ${cPts > 0 ? 'text-emerald-400' : (cPts < 0 ? 'text-red-400' : 'text-slate-200')}">${cPts > 0 ? '+' + cPts.toLocaleString('de-DE') : cPts.toLocaleString('de-DE')}</span></div>
+                                    <div class="flex justify-between gap-2"><span class="text-slate-400">Runden:</span><span class="text-slate-200">${cRd.toLocaleString('de-DE')}</span></div>
+                                    <div class="flex justify-between gap-2"><span class="text-slate-400">Schnitt:</span><span class="text-emerald-300 font-semibold">${Number(cAvg) > 0 ? '+' + cAvg : cAvg}</span></div>
+                                    <div class="flex justify-between gap-2"><span class="text-slate-400">TN / Einzel-S.:</span><span class="text-slate-300">${d.TN ?? 0} TN / <strong class="text-amber-300">${einzelSiege} S</strong></span></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                const detailRow = `
+                    <tr class="bg-[#070c16]">
+                        <td colspan="7" class="p-4 border-b border-emerald-500/20">
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2.5">
+                                Wettbewerbs-Aufteilung von ${cleanPlayerName} (${item.club || 'o.V.'})
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">${cardsHtml}</div>
+                        </td>
+                    </tr>
+                `;
+
+                return mainRow + detailRow;
+            }).join('');
+        }
+
+        function filterGenericTable(tableId, inputId) {
+            const q = (document.getElementById(inputId)?.value || '').toLowerCase();
+            document.querySelectorAll(`#${tableId} tbody tr`).forEach(row => {
+                const s = row.getAttribute('data-search') || '';
+                row.style.display = s.includes(q) ? '' : 'none';
+            });
+        }
+
+        function openSelectedListFromHub(tabId) {
+            if (tabId) switchTab(tabId);
+        }
+
+        function switchTab(tabId) {
+            if (tabId === 'admin' && !isAdminAuthenticated) {
+                toggleAdminAuth();
+                return;
+            }
+
+            const allTabs = ['schedule', 'table', 'kader', 'bot-single-2027', 'single-2027', 'single-2026', 'single-2025', 'ehre-meister', 'ehre-einzel', 'ewige', 'admin'];
+            allTabs.forEach(t => document.getElementById(`tab-${t}`)?.classList.add('hidden'));
+
+            ['table', 'schedule', 'kader'].forEach(t => {
+                const btn = document.getElementById(`nav-${t}`);
+                if (btn) {
+                    btn.className = 'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 bg-slate-900 text-slate-200 border border-slate-800 hover:border-emerald-500/40 hover:text-emerald-300';
+                }
+            });
+
+            document.getElementById(`tab-${tabId}`)?.classList.remove('hidden');
+
+            if (['table', 'schedule', 'kader'].includes(tabId)) {
+                const activeBtn = document.getElementById(`nav-${tabId}`);
+                if (activeBtn) {
+                    activeBtn.className = 'px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-500 text-slate-950 glow-green-btn';
+                }
+            } else if (tabId === 'admin') {
+                renderAdminView();
+            } else {
+                const hubSel = document.getElementById('lists-hub-select');
+                if (hubSel && Array.from(hubSel.options).some(o => o.value === tabId)) {
+                    hubSel.value = tabId;
+                }
+            }
+        }
+
+        function showNotification(text, type = 'success') {
+            const notif = document.getElementById('notification');
+            const notifText = document.getElementById('notification-text');
+            if (!notif || !notifText) return;
+            notifText.innerText = text;
+            notif.className = `p-4 rounded-xl border text-sm flex items-center justify-between transition-all duration-300 ${
+                type === 'success' ? 'bg-emerald-950/90 border-emerald-400/60 text-emerald-200' : 'bg-red-950/90 border-red-500/60 text-red-200'
+            }`;
+            notif.classList.remove('hidden');
+            setTimeout(() => notif.classList.add('hidden'), 4500);
+        }
+
+        function hideNotification() {
+            document.getElementById('notification')?.classList.add('hidden');
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
